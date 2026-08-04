@@ -1,128 +1,171 @@
-# MakeMyStay Realty – Production Deployment Guide (Unified Enterprise Architecture)
+# MakeMyStay Realty – Production Deployment Guide
 
-This guide documents the **unified enterprise architecture** for deploying **`employee.makemystay.ai`** alongside your existing **`makemystay.ai`**, **`admin.makemystay.ai`**, and **`api.makemystay.ai`** on Ubuntu 24.04 LTS.
-
----
-
-## 1. Architecture Overview
+## Architecture
 
 ```
-makemystay.ai          ─┐
-                        │
-admin.makemystay.ai    ─┼──► https://api.makemystay.ai (FastAPI on Port 8000)
-                        │     (Single database, single PM2 process: makemystay-api)
-employee.makemystay.ai ─┘
-  (Next.js on Port 3005)
+┌─────────────────────────────────────────────────────────┐
+│                AWS EC2: 13.201.61.117                    │
+│                                                          │
+│  employee.makemystay.ai  → Nginx → :3005 (Next.js)      │
+│                                    PM2: employee-portal  │
+│                                    /var/www/employee-portal │
+│                                                          │
+│  employee-api.makemystay.ai → Nginx → :8005 (FastAPI)   │
+│                                    PM2: employee-api     │
+│                                    /var/www/property-portal-backend │
+│                                                          │
+│  makemystay.ai / admin.makemystay.ai → :3000 / static   │
+│  api.makemystay.ai → :8000   (existing makemystay-api)  │
+└─────────────────────────────────────────────────────────┘
 ```
 
-- **One Backend (`api.makemystay.ai` on port 8000)**: All three portals use the same API and MySQL database.
-- **New Frontend (`employee.makemystay.ai` on port 3005)**: Hosted in `/var/www/employee-portal`.
-
----
-
-## 2. Pre-Deployment Backup Protocol (Mandatory Rollback Plan)
-
-Before replacing or updating any production services, take these three quick backups on your Ubuntu server:
+## Quick Deploy (One Command)
 
 ```bash
-# 1. Backup existing backend directory
-cd /var/www
-cp -r makemystay-backend makemystay-backend-backup-$(date +%F)
-
-# 2. Backup existing Nginx configuration
-sudo cp /etc/nginx/sites-available/makemystay_all /etc/nginx/sites-available/makemystay_all.backup-$(date +%F)
-
-# 3. Backup MySQL Database
-mysqldump -u root -p makemystay > /var/www/makemystay_backup_$(date +%F).sql
+cd ~/property-portal-backend
+./deploy.sh
 ```
 
----
-
-## 3. Server Deployment Commands
-
-### A. Update Existing Backend (`/var/www/makemystay-backend`)
-1. Pull/deploy the latest backend changes (auth, RBAC, audit logs, employee routes) into your existing backend directory.
-2. Seed MakeMyStay Realty employees:
-   ```bash
-   cd /var/www/makemystay-backend
-   source venv/bin/activate
-   python seed_mmsr_employees.py
-   ```
-3. Restart existing PM2 API process:
-   ```bash
-   pm2 restart makemystay-api
-   ```
-
-### B. Deploy Employee Portal Frontend (`/var/www/employee-portal`)
-1. Clone or sync frontend repository:
-   ```bash
-   cd /var/www
-   git clone <your-frontend-repo> employee-portal
-   cd employee-portal
-   ```
-2. Configure environment variable (`.env.production`):
-   ```env
-   NEXT_PUBLIC_API_URL=https://api.makemystay.ai
-   ```
-3. Install dependencies & build Next.js:
-   ```bash
-   npm install
-   npm run build
-   ```
-4. Start Next.js on port `3005` using PM2:
-   ```bash
-   PORT=3005 pm2 start npm --name employee-portal -- start
-   pm2 save
-   ```
+This script handles everything: backup → rsync → npm build → PM2 restart → Nginx → health checks.
 
 ---
 
-## 4. Nginx Configuration (`/etc/nginx/sites-available/makemystay_all`)
+## Manual Deployment Steps
 
-Add the following block to your `/etc/nginx/sites-available/makemystay_all` configuration file:
+### 1. Deploy Backend
+
+```bash
+# From your local machine:
+rsync -az --delete \
+    --exclude 'venv/' --exclude '__pycache__/' --exclude '.git/' \
+    --exclude '.env' --exclude '*.db' \
+    -e "ssh -i ~/.ssh/mms_deploy.pem" \
+    ~/property-portal-backend/ \
+    ubuntu@13.201.61.117:/var/www/property-portal-backend/
+
+# On the server:
+ssh -i ~/.ssh/mms_deploy.pem ubuntu@13.201.61.117
+cd /var/www/property-portal-backend
+source venv/bin/activate
+pip install -r requirements.txt
+pm2 restart employee-api
+```
+
+### 2. Deploy Frontend
+
+```bash
+# From your local machine:
+rsync -az --delete \
+    --exclude 'node_modules/' --exclude '.next/' --exclude '.git/' \
+    -e "ssh -i ~/.ssh/mms_deploy.pem" \
+    ~/frontend-property-portal/ \
+    ubuntu@13.201.61.117:/var/www/employee-portal/
+
+# On the server:
+ssh -i ~/.ssh/mms_deploy.pem ubuntu@13.201.61.117
+cd /var/www/employee-portal
+npm install
+npm run build
+pm2 restart employee-portal  # or: pm2 start ecosystem.config.js --only employee-portal
+pm2 save
+```
+
+### 3. Production Environment Variables
+
+**Backend** (`/var/www/property-portal-backend/.env`):
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=property_portal
+DB_USER=appuser
+DB_PASSWORD=StrongPassword@123
+SECRET_KEY=propertyportal@2026
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+REFRESH_TOKEN_EXPIRE_DAYS=7
+```
+
+**Frontend** (`/var/www/employee-portal/.env.production`):
+```env
+NEXT_PUBLIC_API_URL=https://employee-api.makemystay.ai/api/v1
+```
+
+### 4. Nginx Configuration
+
+The employee server blocks are in `/etc/nginx/sites-available/makemystay_all`:
 
 ```nginx
+# employee.makemystay.ai → port 3005 (Next.js)
 server {
     listen 80;
     server_name employee.makemystay.ai;
-
     location / {
         proxy_pass http://127.0.0.1:3005;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
+        ...
+    }
+}
+
+# employee-api.makemystay.ai → port 8005 (FastAPI)
+server {
+    listen 80;
+    server_name employee-api.makemystay.ai;
+    location / {
+        proxy_pass http://127.0.0.1:8005;
+        ...
     }
 }
 ```
 
-> **Pro-Tip (Nginx Optimization)**: As you add more subdomains, you can move common proxy headers into a reusable include file (`include /etc/nginx/snippets/proxy-common.conf;`) to keep your server blocks concise.
-
-Then test and reload Nginx:
+After any Nginx changes:
 ```bash
-sudo nginx -t
-sudo systemctl reload nginx
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
+### 5. SSL (If not yet configured)
 
----
-
-## 4. Enable Let's Encrypt SSL
-
-Run Certbot for the new employee subdomain:
 ```bash
-sudo certbot --nginx -d employee.makemystay.ai
+sudo certbot --nginx -d employee.makemystay.ai -d employee-api.makemystay.ai
 ```
 
 ---
 
-## 5. Verification Checklist
+## PM2 Process Reference
 
-- [x] Access `https://employee.makemystay.ai` over HTTPS.
-- [x] Login as an admin (`madhava@makemystay.ai` / `123456`) or employee.
-- [x] Verify API responses from `https://api.makemystay.ai`.
-- [x] Verify `pm2 list` shows `makemystay-api` (port 8000) and `employee-portal` (port 3005) both online.
+| PM2 Name         | Port | Description                        |
+|------------------|------|------------------------------------|
+| employee-api     | 8005 | FastAPI backend (property portal)  |
+| employee-portal  | 3005 | Next.js frontend (employee portal) |
+| makemystay-api   | 8000 | Existing MakeMyStay FastAPI        |
+| makemystay-celery| -    | Existing Celery worker             |
+
+```bash
+pm2 list                    # View all processes
+pm2 logs employee-api       # View API logs
+pm2 logs employee-portal    # View frontend logs
+pm2 restart employee-api    # Restart API
+pm2 restart employee-portal # Restart frontend
+pm2 save                    # Save process list (survives reboots)
+```
+
+---
+
+## Verification Checklist
+
+- [ ] `pm2 list` shows `employee-api` (online) and `employee-portal` (online)
+- [ ] `curl http://localhost:8005/health` → `{"status":"healthy"}`
+- [ ] `curl -o /dev/null -w '%{http_code}' http://localhost:3005/` → `200`
+- [ ] `https://employee.makemystay.ai` loads the login page
+- [ ] `https://employee-api.makemystay.ai/docs` shows FastAPI Swagger UI
+
+---
+
+## Rollback
+
+```bash
+# On the server:
+pm2 stop employee-portal employee-api
+
+# Restore Nginx from backup:
+sudo cp /etc/nginx/sites-available/makemystay_all.bak /etc/nginx/sites-available/makemystay_all
+sudo nginx -t && sudo systemctl reload nginx
+```
