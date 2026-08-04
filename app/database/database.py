@@ -1,5 +1,6 @@
 import logging
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.core.config import (
@@ -12,8 +13,13 @@ from app.core.config import (
 
 logger = logging.getLogger(__name__)
 
-MYSQL_URL = (
-    f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+MYSQL_URL = URL.create(
+    drivername="mysql+pymysql",
+    username=DB_USER,
+    password=DB_PASSWORD,
+    host=DB_HOST,
+    port=int(DB_PORT) if DB_PORT else 3306,
+    database=DB_NAME,
 )
 SQLITE_URL = "sqlite:///./property_portal.db"
 
