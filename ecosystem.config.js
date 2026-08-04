@@ -14,7 +14,7 @@ module.exports = {
       cwd: "/var/www/employee-portal",
       env: {
         PORT: 3005,
-        NEXT_PUBLIC_API_URL: "https://api.makemystay.ai"
+        NEXT_PUBLIC_API_URL: "₹"
       }
     }
   ]
