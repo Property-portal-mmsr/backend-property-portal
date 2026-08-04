@@ -21,10 +21,22 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Property Portal API", version="1.0.0")
 
-# Configure CORS for Next.js frontend
+# Configure CORS for Next.js frontend and production domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
+    allow_origins=[
+        "https://employee.makemystay.ai",
+        "https://www.employee.makemystay.ai",
+        "http://employee.makemystay.ai",
+        "https://makemystay.ai",
+        "https://www.makemystay.ai",
+        "https://admin.makemystay.ai",
+        "http://localhost:3000",
+        "http://localhost:3005",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3005",
+    ],
+    allow_origin_regex=r"https://.*\.makemystay\.ai|http://localhost:.*|http://127\.0\.0\.1:.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,6 +62,12 @@ def root():
         "message": "Property Portal API Running 🚀",
         "docs_url": "/docs",
     }
+
+
+@app.get("/health")
+def health_check():
+    """AWS ALB health check endpoint."""
+    return {"status": "healthy"}
 
 
 @app.post("/login", response_model=TokenResponse, tags=["Authentication"])
