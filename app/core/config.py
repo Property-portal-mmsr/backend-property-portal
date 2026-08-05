@@ -3,13 +3,22 @@ import os
 
 load_dotenv()
 
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
+def get_env(name: str, default: str = None) -> str:
+    value = os.getenv(name, default)
+    if value is None:
+        raise RuntimeError(
+            f"❌ Missing required environment variable: {name}\n"
+            "Please configure your .env file from .env.example"
+        )
+    return value
 
-SECRET_KEY = os.getenv("SECRET_KEY", "makemystay_super_secret_jwt_key")
+DB_HOST = get_env("DB_HOST")
+DB_PORT = get_env("DB_PORT")
+DB_NAME = get_env("DB_NAME")
+DB_USER = get_env("DB_USER")
+DB_PASSWORD = get_env("DB_PASSWORD")
+
+SECRET_KEY = get_env("SECRET_KEY", "makemystay_super_secret_jwt_key")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(
     os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440)
