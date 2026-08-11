@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.database import Base, engine, SessionLocal, sync_table_schema, get_db
 from app.models.employee import Employee
+from app.models.employee_monthly_target import EmployeeMonthlyTarget
 from app.models.owner import Owner
 from app.models.property import Property
 from app.models.audit_log import AuditLog

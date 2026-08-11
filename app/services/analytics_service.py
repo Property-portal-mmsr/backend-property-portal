@@ -25,6 +25,7 @@ from typing import Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.models.employee import Employee
+from app.models.employee_monthly_target import EmployeeMonthlyTarget
 from app.services.google_sheet_service import SheetRecord, fetch_sheet_records
 from app.schemas.analytics import (
     DailyRevenueItem,
@@ -174,6 +175,43 @@ def _apply_filters(
 
 
 # ---------------------------------------------------------------------------
+# Target fetching helper
+# ---------------------------------------------------------------------------
+
+def _get_targets_for_month(db: Session, active_employees: List[Employee], month_str: str) -> Dict[int, float]:
+    try:
+        y, m = map(int, month_str.split('-'))
+    except ValueError:
+        return {}
+    
+    if not active_employees:
+        return {}
+        
+    targets = db.query(EmployeeMonthlyTarget).filter(
+        EmployeeMonthlyTarget.month == m,
+        EmployeeMonthlyTarget.year == y,
+        EmployeeMonthlyTarget.employee_id.in_([e.id for e in active_employees])
+    ).all()
+    
+    target_map = {t.employee_id: t.target for t in targets}
+    
+    # Apply fallback: use employee's base monthly_target if no month-specific target is set
+    final_targets = {}
+    for e in active_employees:
+        if e.id in target_map:
+            final_targets[e.id] = target_map[e.id]
+        else:
+            final_targets[e.id] = float(e.monthly_target or 0.0)
+    return final_targets
+
+
+def _target_for_emp(emp: Optional[Employee], targets_map: Dict[int, float], month_str: str) -> float:
+    if not emp:
+        return 0.0
+    return targets_map.get(emp.id, 0.0)
+
+
+# ---------------------------------------------------------------------------
 # Main analytics function
 # ---------------------------------------------------------------------------
 
@@ -231,6 +269,10 @@ def build_dashboard(
         prev_month_date = reference_date.replace(month=reference_date.month - 1)
     prev_month_str = prev_month_date.strftime("%Y-%m")
 
+    # Fetch targets for current and previous month
+    current_targets = _get_targets_for_month(db, active_employees, current_month_str)
+    prev_targets = _get_targets_for_month(db, active_employees, prev_month_str)
+
     # 5. Apply all filters to enriched records
     def _match_filters(rec: SheetRecord, emp: Employee) -> bool:
         if month and _record_month(rec) != month:
@@ -267,7 +309,7 @@ def build_dashboard(
     # Overall target = sum of monthly targets of applicable active RMs with records
     applicable_rms = set(rm_revenue.keys())
     overall_target = sum(
-        (rm_employee[name].monthly_target or 100000.0 if name in rm_employee else 100000.0) 
+        _target_for_emp(rm_employee.get(name), current_targets, current_month_str)
         for name in applicable_rms
     )
     achievement_pct = calculate_achievement_pct(total_revenue, overall_target)
@@ -333,8 +375,9 @@ def build_dashboard(
         m_beds = sum(r.key_count for r, _ in month_records)
         # target for the month: sum targets of all RMs appearing in that month
         m_rms_names = set((e.name if e and e.name else r.rm_name.strip().title()) for r, e in month_records)
+        m_targets_map = current_targets if m_str == current_month_str else prev_targets
         m_target = sum(
-            (rm_map[_normalize_name(n)].monthly_target or 100000.0 if _normalize_name(n) in rm_map else 100000.0) 
+            _target_for_emp(rm_map.get(_normalize_name(n)), m_targets_map, m_str)
             for n in m_rms_names
         )
         m_achievement = calculate_achievement_pct(m_revenue, m_target)
@@ -358,7 +401,7 @@ def build_dashboard(
     leaderboard_data: List[LeaderboardItem] = []
     for name, rev in rm_revenue.items():
         emp = rm_employee.get(name)
-        target = emp.monthly_target or 100000.0 if emp else 100000.0
+        target = _target_for_emp(emp, current_targets, current_month_str)
         beds = rm_key_count[name]
         ach = calculate_achievement_pct(rev, target)
         remaining = max(0.0, target - rev)
@@ -381,7 +424,7 @@ def build_dashboard(
     performance_rows: List[PerformanceTableItem] = []
     for name, rev in rm_revenue.items():
         emp = rm_employee.get(name)
-        target = emp.monthly_target or 100000.0 if emp else 100000.0
+        target = _target_for_emp(emp, current_targets, current_month_str)
         beds = rm_key_count[name]
         ach = calculate_achievement_pct(rev, target)
         remaining = max(0.0, target - rev)

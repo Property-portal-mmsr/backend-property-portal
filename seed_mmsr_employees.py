@@ -18,6 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.database.database import SessionLocal, engine, Base
 from app.models.employee import Employee
+from app.models.employee_monthly_target import EmployeeMonthlyTarget
 from app.utils.password import hash_password
 
 
@@ -472,6 +473,33 @@ def seed_company_roster():
         print(
             f"   -> New records added: {created_count} | Updated records: {updated_count}"
         )
+
+        print("4. Seeding month-specific targets (1L for August 2026, 0 for July 2026)...")
+        all_emps = db.query(Employee).all()
+        targets_created = 0
+        for e in all_emps:
+            # Set base default target to 0
+            e.monthly_target = 0
+
+            # Seed August 2026 target (1,00,000)
+            aug_target = db.query(EmployeeMonthlyTarget).filter_by(employee_id=e.id, month=8, year=2026).first()
+            if not aug_target:
+                db.add(EmployeeMonthlyTarget(employee_id=e.id, month=8, year=2026, target=100000.0))
+                targets_created += 1
+            else:
+                aug_target.target = 100000.0
+
+            # Seed July 2026 target (0)
+            jul_target = db.query(EmployeeMonthlyTarget).filter_by(employee_id=e.id, month=7, year=2026).first()
+            if not jul_target:
+                db.add(EmployeeMonthlyTarget(employee_id=e.id, month=7, year=2026, target=0.0))
+                targets_created += 1
+            else:
+                jul_target.target = 0.0
+
+        db.commit()
+        print(f"   -> Successfully mapped {targets_created} monthly targets for all employees!")
+
         print("\nSummary of Key Credentials:")
         print("   * Admin Accounts (no forced password change):")
         print("     - admin@makemystay.ai (System Admin) | Password: 123456")
