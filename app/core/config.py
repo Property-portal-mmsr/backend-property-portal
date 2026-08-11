@@ -27,4 +27,8 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(
     os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7)
 )
 
+GOOGLE_SHEET_URL = os.getenv(
+    "GOOGLE_SHEET_URL",
+    ""
+)
 
