@@ -195,23 +195,19 @@ def _get_targets_for_month(db: Session, active_employees: List[Employee], month_
     
     target_map = {t.employee_id: t.target for t in targets}
     
-    # Apply fallback: 1,00,000 for August, 0 for rest
+    # Apply fallback: use employee's base monthly_target if no month-specific target is set
     final_targets = {}
     for e in active_employees:
         if e.id in target_map:
             final_targets[e.id] = target_map[e.id]
         else:
-            final_targets[e.id] = 100000.0 if m == 8 else 0.0
+            final_targets[e.id] = float(e.monthly_target or 0.0)
     return final_targets
 
 
 def _target_for_emp(emp: Optional[Employee], targets_map: Dict[int, float], month_str: str) -> float:
     if not emp:
-        try:
-            m = int(month_str.split('-')[1])
-            return 100000.0 if m == 8 else 0.0
-        except:
-            return 0.0
+        return 0.0
     return targets_map.get(emp.id, 0.0)
 
 
