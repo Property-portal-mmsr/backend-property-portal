@@ -39,6 +39,8 @@ for SERVER in "${ALL_SERVERS[@]}"; do
       --exclude '__pycache__' \
       --exclude '.git' \
       --exclude '*.pyc' \
+      --exclude '.env' \
+      --exclude '*.db' \
       -e "ssh $SSH_OPTS" ./ "$EC2_USER@$SERVER:$WEB_BASE_DIR/"; then
       echo "❌ Error: rsync failed for $SERVER."
       FAILED_SERVERS+=("$SERVER")
