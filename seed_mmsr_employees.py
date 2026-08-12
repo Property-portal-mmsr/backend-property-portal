@@ -474,12 +474,42 @@ def seed_company_roster():
             f"   -> New records added: {created_count} | Updated records: {updated_count}"
         )
 
-        print("4. Seeding month-specific targets (1L for August 2026, 0 for July 2026)...")
+        print("4. Seeding month-specific targets and base targets...")
+        
+        # Base monthly target per employee (used as fallback for months without a specific entry)
+        BASE_TARGETS = {
+            "MMSR00": 150000,   # System Admin
+            "MMSR01": 250000,   # Madhava R
+            "MMSR02": 150000,   # Arun N
+            "MMSR03": 140000,   # Kiran M R
+            "MMSR04": 180000,   # Sanjota
+            "MMSR07": 150000,   # Chethan P
+            "MMSR08": 100000,   # Gowtham N
+            "MMSR09": 120000,   # Pritish Kumar Jena
+            "MMSR10": 150000,   # Jeron Roy Jacob S
+            "MMSR11": 150000,   # Maheswaran M
+            "MMSR12": 150000,   # Harshini B
+            "MMSR13": 150000,   # Prashanthi
+            "MMSR14": 100000,   # Naveen
+            "MMSR15": 100000,   # Kalyan Kumar Reddy
+            "MMSR16": 150000,   # Abhishek
+            "MMSR17": 150000,   # Pratima
+            "MMSR18": 150000,   # Kesava
+            "MMSR19": 150000,   # Sameer
+            "MMSR20": 150000,   # Vinod
+            "MMSR21": 150000,   # Likitha
+            "MMSR22": 150000,   # Akhila
+            "MMSR23": 150000,   # Bharath
+            "MMSR24": 150000,   # Priyanka
+            "MMSR25": 150000,   # Nagarjuna
+            "MMSR26": 150000,   # Lukmanul Hateem M A
+        }
+
         all_emps = db.query(Employee).all()
         targets_created = 0
         for e in all_emps:
-            # Set base default target to 0
-            e.monthly_target = 0
+            # Set base monthly_target as the per-employee fallback
+            e.monthly_target = BASE_TARGETS.get(e.emp_id, 150000)
 
             # Seed August 2026 target (1,00,000)
             aug_target = db.query(EmployeeMonthlyTarget).filter_by(employee_id=e.id, month=8, year=2026).first()
