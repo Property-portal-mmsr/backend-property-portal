@@ -306,14 +306,22 @@ def build_dashboard(
     total_revenue = sum(rm_revenue.values())
     total_beds = sum(rm_key_count.values())
 
-    # Overall target = sum of monthly targets of applicable active RMs with records
+    # Overall target = sum of monthly targets of applicable active RMs
+    filtered_employees = active_employees
+    if rm_name:
+        rm_lower = rm_name.strip().lower()
+        filtered_employees = [
+            emp for emp in active_employees
+            if rm_lower in emp.name.lower()
+        ]
+        
+    overall_target = sum(current_targets.get(emp.id, 0.0) for emp in filtered_employees)
+    
+    # "Active RMs" means how many active employees are in the emp table (matching filters)
     applicable_rms = set(rm_revenue.keys())
-    overall_target = sum(
-        _target_for_emp(rm_employee.get(name), current_targets, current_month_str)
-        for name in applicable_rms
-    )
+    active_rms_count = len(filtered_employees)
+
     achievement_pct = calculate_achievement_pct(total_revenue, overall_target)
-    active_rms_count = len(applicable_rms)
 
     kpis = KPIResponse(
         total_revenue=total_revenue,
