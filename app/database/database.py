@@ -21,23 +21,9 @@ MYSQL_URL = URL.create(
     port=int(DB_PORT) if DB_PORT else 3306,
     database=DB_NAME,
 )
-SQLITE_URL = "sqlite:///./property_portal.db"
-
-try:
-    engine = create_engine(MYSQL_URL, pool_pre_ping=True)
-    with engine.connect() as conn:
-        pass
-    logger.info(f"Connected to MySQL database at {DB_HOST}:{DB_PORT}/{DB_NAME}")
-    DATABASE_URL = MYSQL_URL
-except Exception as e:
-    logger.warning(
-        f"MySQL database unavailable ({e}). Falling back to SQLite local database."
-    )
-    DATABASE_URL = SQLITE_URL
-    engine = create_engine(
-        SQLITE_URL,
-        connect_args={"check_same_thread": False},
-    )
+engine = create_engine(MYSQL_URL, pool_pre_ping=True)
+DATABASE_URL = MYSQL_URL
+logger.info(f"Connected to MySQL database at {DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 SessionLocal = sessionmaker(
     autocommit=False,
