@@ -508,9 +508,6 @@ def seed_company_roster():
         all_emps = db.query(Employee).all()
         targets_created = 0
         for e in all_emps:
-            # Set base monthly_target as the per-employee fallback
-            e.monthly_target = BASE_TARGETS.get(e.emp_id, 150000)
-
             # Seed August 2026 target (1,00,000)
             aug_target = db.query(EmployeeMonthlyTarget).filter_by(employee_id=e.id, month=8, year=2026).first()
             if not aug_target:
