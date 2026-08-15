@@ -12,6 +12,8 @@ def get_env(name: str, default: str = None) -> str:
         )
     return value
 
+ENVIRONMENT = get_env("ENVIRONMENT", "development")
+
 DB_HOST = get_env("DB_HOST")
 DB_PORT = get_env("DB_PORT")
 DB_NAME = get_env("DB_NAME")

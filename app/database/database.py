@@ -4,6 +4,7 @@ from sqlalchemy.engine import URL
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.core.config import (
+    ENVIRONMENT,
     DB_HOST,
     DB_PORT,
     DB_NAME,
@@ -21,9 +22,28 @@ MYSQL_URL = URL.create(
     port=int(DB_PORT) if DB_PORT else 3306,
     database=DB_NAME,
 )
-engine = create_engine(MYSQL_URL, pool_pre_ping=True)
-DATABASE_URL = MYSQL_URL
-logger.info(f"Connected to MySQL database at {DB_HOST}:{DB_PORT}/{DB_NAME}")
+SQLITE_URL = "sqlite:///./property_portal.db"
+
+try:
+    engine = create_engine(MYSQL_URL, pool_pre_ping=True)
+    with engine.connect() as conn:
+        pass
+    logger.info(f"Connected to MySQL database at {DB_HOST}:{DB_PORT}/{DB_NAME}")
+    DATABASE_URL = MYSQL_URL
+except Exception as e:
+    if ENVIRONMENT == "development":
+        logger.warning(
+            f"MySQL database unavailable ({e}). Falling back to SQLite local database."
+        )
+        DATABASE_URL = SQLITE_URL
+        engine = create_engine(
+            SQLITE_URL,
+            connect_args={"check_same_thread": False},
+        )
+    else:
+        logger.error(f"Failed to connect to MySQL in {ENVIRONMENT} environment: {e}")
+        raise e
+
 
 SessionLocal = sessionmaker(
     autocommit=False,
