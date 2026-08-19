@@ -12,6 +12,14 @@ class CaretakerInfo(BaseModel):
     phone: str = "+91 9123456789"
 
 
+class PriceInfo(BaseModel):
+    starting: Optional[float] = None
+    single: Optional[float] = None
+    double: Optional[float] = None
+    triple: Optional[float] = None
+    private: Optional[float] = None
+
+
 class PropertyCreate(BaseModel):
     propertyId: Optional[str] = "PRP1001"
     name: str
@@ -63,6 +71,7 @@ class PropertyResponse(BaseModel):
     location: str
     address: str
     status: str
+    price: Optional[PriceInfo] = None
     images: List[str]
     owner: OwnerInfo
     caretaker: CaretakerInfo
@@ -86,7 +95,14 @@ class PropertyResponse(BaseModel):
             location=prop.location or "Whitefield",
             address=prop.address or "Whitefield, Bangalore",
             status=prop.status or "Available",
-            images=prop.images if isinstance(prop.images, list) else [],
+            price=PriceInfo(
+                starting=float(prop.property_pricing.starting_price) if prop.property_pricing and prop.property_pricing.starting_price is not None else None,
+                single=float(prop.property_pricing.single_price) if prop.property_pricing and prop.property_pricing.single_price is not None else None,
+                double=float(prop.property_pricing.double_price) if prop.property_pricing and prop.property_pricing.double_price is not None else None,
+                triple=float(prop.property_pricing.triple_price) if prop.property_pricing and prop.property_pricing.triple_price is not None else None,
+                private=float(prop.property_pricing.private_price) if prop.property_pricing and prop.property_pricing.private_price is not None else None,
+            ) if prop.property_pricing else None,
+            images=[img.image_url for img in prop.property_images] if getattr(prop, 'property_images', None) else (prop.images if isinstance(prop.images, list) else []),
             owner=OwnerInfo(
                 name=prop.owner_name or "Rajesh Kumar",
                 phone=prop.owner_phone or "+91 9876543210",
@@ -97,7 +113,7 @@ class PropertyResponse(BaseModel):
             ),
             availableUnits=prop.available_units or 0,
             totalUnits=prop.total_units or 0,
-            amenities=prop.amenities if isinstance(prop.amenities, list) else [],
+            amenities=[am.amenity_name for am in prop.property_amenities] if getattr(prop, 'property_amenities', None) else (prop.amenities if isinstance(prop.amenities, list) else []),
             pgOptions=prop.pg_options if isinstance(prop.pg_options, list) else [],
             rentalOptions=(
                 prop.rental_options if isinstance(prop.rental_options, list) else []
