@@ -2,6 +2,8 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+if os.getenv("ENVIRONMENT") == "production":
+    load_dotenv(".env.production", override=True)
 
 def get_env(name: str, default: str = None) -> str:
     value = os.getenv(name, default)

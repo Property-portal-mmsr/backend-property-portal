@@ -13,6 +13,7 @@ module.exports = {
       interpreter: "none",
       env: {
         NODE_ENV: "production",
+        ENVIRONMENT: "production",
         PYTHONPATH: "/var/www/property-portal-backend",
       },
     },
@@ -24,7 +25,8 @@ module.exports = {
       env: {
         PORT: 3005,
         NODE_ENV: "production",
-        NEXT_PUBLIC_API_URL: "https://employee-api.makemystay.ai/api/v1",
+        NEXT_PUBLIC_API_URL: "/employee-api/v1",
+        BACKEND_API_URL: "https://employee-api.makemystay.ai/api/v1",
       },
     },
   ],
