@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.database.database import get_db
-from app.schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse
+from app.schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse, PaginatedPropertyResponse
 from app.services.property_service import PropertyService
 from app.services.audit_service import AuditService
 from app.dependencies import get_current_admin_user
@@ -11,9 +11,33 @@ from app.models.employee import Employee
 router = APIRouter(prefix="/properties", tags=["Properties"])
 
 
-@router.get("", response_model=List[PropertyResponse])
-def get_properties(db: Session = Depends(get_db)):
-    return PropertyService.get_all_properties(db)
+@router.get("", response_model=PaginatedPropertyResponse)
+def get_properties(
+    location: Optional[str] = Query(None),
+    propertyType: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    furnishing: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    units: Optional[str] = Query(None),
+    priceRange: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    return PropertyService.get_all_properties(
+        db=db,
+        location=location,
+        propertyType=propertyType,
+        category=category,
+        furnishing=furnishing,
+        status=status,
+        units=units,
+        priceRange=priceRange,
+        search=search,
+        skip=skip,
+        limit=limit
+    )
 
 
 @router.get("/{property_id}", response_model=PropertyResponse)
@@ -67,3 +91,16 @@ def delete_property(
     )
     return None
 
+@router.post("/restore/{property_id}")
+def restore_property(
+    property_id: int,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_admin_user)
+):
+    restored = PropertyService.restore_property(db, property_id)
+    if not restored:
+        raise HTTPException(status_code=404, detail="Property not found or not deleted")
+    AuditService.log_action(
+        db, current_user.id, current_user.name or "Admin", "Restored Property", "Property", str(property_id)
+    )
+    return {"message": "Property restored successfully"}

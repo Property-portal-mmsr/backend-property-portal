@@ -25,7 +25,12 @@ MYSQL_URL = URL.create(
 SQLITE_URL = "sqlite:///./property_portal.db"
 
 try:
-    engine = create_engine(MYSQL_URL, pool_pre_ping=True)
+    engine = create_engine(
+        MYSQL_URL, 
+        pool_pre_ping=True, 
+        pool_recycle=60,
+        connect_args={"connect_timeout": 2, "read_timeout": 2, "write_timeout": 2}
+    )
     with engine.connect() as conn:
         pass
     logger.info(f"Connected to MySQL database at {DB_HOST}:{DB_PORT}/{DB_NAME}")

@@ -122,3 +122,10 @@ class PropertyResponse(BaseModel):
             listedDate=prop.listed_date or "15 May 2026",
             youtubeLink=prop.youtube_link or "",
         )
+
+class PaginatedPropertyResponse(BaseModel):
+    items: List[PropertyResponse]
+    total: int
+    page: int
+    size: int
+    pages: int

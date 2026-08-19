@@ -4,10 +4,51 @@ from app.models.property import Property
 from app.schemas.property import PropertyCreate, PropertyUpdate
 
 
+from sqlalchemy import or_, func
+
 class PropertyRepository:
     @staticmethod
-    def get_all(db: Session) -> List[Property]:
-        return db.query(Property).all()
+    def get_all(
+        db: Session,
+        location: Optional[str] = None,
+        category: Optional[str] = None,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+        units: Optional[str] = None,
+    ) -> List[Property]:
+        query = db.query(Property)
+        
+        if search:
+            search_term = f"%{search.lower()}%"
+            query = query.filter(
+                or_(
+                    func.lower(Property.property_name).like(search_term),
+                    func.lower(Property.location).like(search_term),
+                    func.lower(Property.property_id).like(search_term)
+                )
+            )
+
+        if location:
+            query = query.filter(Property.location == location)
+            
+        if category:
+            query = query.filter(Property.category == category)
+            
+        if status:
+            query = query.filter(Property.status == status)
+            
+        if units:
+            if units == "1-5 Units":
+                query = query.filter(Property.available_units >= 1, Property.available_units <= 5)
+            elif units == "6-10 Units":
+                query = query.filter(Property.available_units >= 6, Property.available_units <= 10)
+            elif units == "11-20 Units":
+                query = query.filter(Property.available_units >= 11, Property.available_units <= 20)
+            elif units == "20+ Units":
+                query = query.filter(Property.available_units > 20)
+                
+        # We order by ID descending to get latest properties first
+        return query.order_by(Property.id.desc()).all()
 
     @staticmethod
     def get_by_id(db: Session, property_id: int) -> Optional[Property]:
