@@ -60,14 +60,22 @@ class PropertyRepository:
 
     @staticmethod
     def create(db: Session, prop_data: PropertyCreate) -> Property:
-        owner_name = prop_data.owner.name if prop_data.owner else "Rajesh Kumar"
-        owner_phone = prop_data.owner.phone if prop_data.owner else "+91 9876543210"
-        caretaker_name = prop_data.caretaker.name if prop_data.caretaker else "Arun Kumar"
-        caretaker_phone = prop_data.caretaker.phone if prop_data.caretaker else "+91 9123456789"
+        owner_name = prop_data.owner.name if prop_data.owner else None
+        owner_phone = prop_data.owner.phone if prop_data.owner else None
+        caretaker_name = prop_data.caretaker.name if prop_data.caretaker else None
+        caretaker_phone = prop_data.caretaker.phone if prop_data.caretaker else None
 
         new_prop = Property(
-            property_id=prop_data.propertyId or "PRP1001",
+            property_id=prop_data.propertyId,
             property_name=prop_data.name,
+            description=prop_data.description,
+            city=prop_data.city,
+            state=prop_data.state,
+            pincode=prop_data.pincode,
+            deposit=prop_data.deposit,
+            unit_type=prop_data.unitType,
+            furnishing=prop_data.furnishing,
+            other_specifications=prop_data.otherSpecifications,
             property_type=prop_data.propertyType,
             category=prop_data.category,
             location=prop_data.location,
@@ -83,56 +91,101 @@ class PropertyRepository:
             amenities=prop_data.amenities,
             pg_options=prop_data.pgOptions,
             rental_options=prop_data.rentalOptions,
+            sales_kit=prop_data.salesKit,
             preferred_for=prop_data.preferredFor,
             listed_date=prop_data.listedDate,
-            youtube_link=prop_data.youtubeLink or "",
+            youtube_link=prop_data.youtubeLink,
         )
         db.add(new_prop)
         db.commit()
         db.refresh(new_prop)
+        
+        # Handle pricing
+        if hasattr(prop_data, 'price') and prop_data.price:
+            from app.models.property import PropertyPricing
+            new_pricing = PropertyPricing(
+                property_id=new_prop.id,
+                starting_price=prop_data.price.starting,
+                single_price=prop_data.price.single,
+                double_price=prop_data.price.double,
+                triple_price=prop_data.price.triple,
+                private_price=prop_data.price.private,
+            )
+            db.add(new_pricing)
+            db.commit()
+            db.refresh(new_prop)
+
         return new_prop
 
     @staticmethod
     def update(db: Session, db_prop: Property, update_data: PropertyUpdate) -> Property:
         update_dict = update_data.model_dump(exclude_unset=True)
-        if "name" in update_dict and update_dict["name"] is not None:
-            db_prop.property_name = update_dict["name"]
-        if "propertyId" in update_dict and update_dict["propertyId"]:
-            db_prop.property_id = update_dict["propertyId"]
-        if "propertyType" in update_dict and update_dict["propertyType"] is not None:
-            db_prop.property_type = update_dict["propertyType"]
-        if "category" in update_dict and update_dict["category"] is not None:
-            db_prop.category = update_dict["category"]
-        if "location" in update_dict and update_dict["location"] is not None:
-            db_prop.location = update_dict["location"]
-        if "address" in update_dict and update_dict["address"] is not None:
-            db_prop.address = update_dict["address"]
-        if "status" in update_dict and update_dict["status"] is not None:
-            db_prop.status = update_dict["status"]
-        if "images" in update_dict and update_dict["images"] is not None:
-            db_prop.images = update_dict["images"]
-        if "availableUnits" in update_dict and update_dict["availableUnits"] is not None:
-            db_prop.available_units = update_dict["availableUnits"]
-        if "totalUnits" in update_dict and update_dict["totalUnits"] is not None:
-            db_prop.total_units = update_dict["totalUnits"]
-        if "amenities" in update_dict and update_dict["amenities"] is not None:
-            db_prop.amenities = update_dict["amenities"]
-        if "pgOptions" in update_dict and update_dict["pgOptions"] is not None:
-            db_prop.pg_options = update_dict["pgOptions"]
-        if "rentalOptions" in update_dict and update_dict["rentalOptions"] is not None:
-            db_prop.rental_options = update_dict["rentalOptions"]
-        if "preferredFor" in update_dict and update_dict["preferredFor"] is not None:
-            db_prop.preferred_for = update_dict["preferredFor"]
-        if "listedDate" in update_dict and update_dict["listedDate"] is not None:
-            db_prop.listed_date = update_dict["listedDate"]
-        if "youtubeLink" in update_dict and update_dict["youtubeLink"] is not None:
-            db_prop.youtube_link = update_dict["youtubeLink"]
+        
+        # Define mapping from schema names to DB model attributes
+        field_mapping = {
+            "name": "property_name",
+            "propertyId": "property_id",
+            "description": "description",
+            "city": "city",
+            "state": "state",
+            "pincode": "pincode",
+            "deposit": "deposit",
+            "unitType": "unit_type",
+            "furnishing": "furnishing",
+            "otherSpecifications": "other_specifications",
+            "propertyType": "property_type",
+            "category": "category",
+            "location": "location",
+            "address": "address",
+            "status": "status",
+            "images": "images",
+            "availableUnits": "available_units",
+            "totalUnits": "total_units",
+            "amenities": "amenities",
+            "pgOptions": "pg_options",
+            "rentalOptions": "rental_options",
+            "salesKit": "sales_kit",
+            "preferredFor": "preferred_for",
+            "listedDate": "listed_date",
+            "youtubeLink": "youtube_link",
+        }
+
+        for schema_field, db_field in field_mapping.items():
+            if schema_field in update_dict and update_dict[schema_field] is not None:
+                setattr(db_prop, db_field, update_dict[schema_field])
+
         if update_data.owner:
-            db_prop.owner_name = update_data.owner.name
-            db_prop.owner_phone = update_data.owner.phone
+            if update_data.owner.name is not None:
+                db_prop.owner_name = update_data.owner.name
+            if update_data.owner.phone is not None:
+                db_prop.owner_phone = update_data.owner.phone
+                
         if update_data.caretaker:
-            db_prop.caretaker_name = update_data.caretaker.name
-            db_prop.caretaker_phone = update_data.caretaker.phone
+            if update_data.caretaker.name is not None:
+                db_prop.caretaker_name = update_data.caretaker.name
+            if update_data.caretaker.phone is not None:
+                db_prop.caretaker_phone = update_data.caretaker.phone
+                
+        # Handle pricing update
+        if hasattr(update_data, 'price') and update_data.price:
+            from app.models.property import PropertyPricing
+            pricing = db.query(PropertyPricing).filter(PropertyPricing.property_id == db_prop.id).first()
+            if pricing:
+                if update_data.price.starting is not None: pricing.starting_price = update_data.price.starting
+                if update_data.price.single is not None: pricing.single_price = update_data.price.single
+                if update_data.price.double is not None: pricing.double_price = update_data.price.double
+                if update_data.price.triple is not None: pricing.triple_price = update_data.price.triple
+                if update_data.price.private is not None: pricing.private_price = update_data.price.private
+            else:
+                new_pricing = PropertyPricing(
+                    property_id=db_prop.id,
+                    starting_price=update_data.price.starting,
+                    single_price=update_data.price.single,
+                    double_price=update_data.price.double,
+                    triple_price=update_data.price.triple,
+                    private_price=update_data.price.private,
+                )
+                db.add(new_pricing)
 
         db.commit()
         db.refresh(db_prop)
@@ -145,74 +198,5 @@ class PropertyRepository:
 
     @staticmethod
     def seed_default_properties(db: Session) -> None:
-        count = db.query(Property).count()
-        if count > 0:
-            return
-
-        defaults = [
-            {
-                "property_id": "PRP1001",
-                "property_name": "Green Residency",
-                "property_type": "PG",
-                "category": "Co-Living",
-                "location": "Whitefield",
-                "address": "Whitefield, Bangalore",
-                "status": "Available",
-                "images": ["/properties/property1.jpeg"],
-                "owner_name": "Rajesh Kumar",
-                "owner_phone": "+91 9876543210",
-                "caretaker_name": "Arun Kumar",
-                "caretaker_phone": "+91 9123456789",
-                "available_units": 12,
-                "total_units": 30,
-                "amenities": ["WiFi", "Power Backup", "Lift", "Parking"],
-                "pg_options": [
-                    {"sharing": "Single", "furnishing": "Fully Furnished", "price": 18000},
-                    {"sharing": "Double", "furnishing": "Semi Furnished", "price": 12000},
-                    {"sharing": "Triple", "furnishing": "Fully Furnished", "price": 9000},
-                ],
-                "rental_options": [
-                    {"type": "1 RK", "balcony": False, "furnishing": "Semi Furnished", "price": 15000},
-                    {"type": "1 BHK", "balcony": True, "furnishing": "Fully Furnished", "price": 28000},
-                    {"type": "2 BHK", "balcony": True, "furnishing": "Semi Furnished", "price": 38000},
-                ],
-                "preferred_for": "Anyone",
-                "listed_date": "15 May 2026",
-                "youtube_link": "",
-            },
-            {
-                "property_id": "PRP1002",
-                "property_name": "Vip Residency",
-                "property_type": "PG",
-                "category": "Co-Living",
-                "location": "Whitefield",
-                "address": "Whitefield, Bangalore",
-                "status": "Available",
-                "images": ["/properties/property2.jpeg"],
-                "owner_name": "Rajesh Kumar",
-                "owner_phone": "+91 9876543210",
-                "caretaker_name": "Arun Kumar",
-                "caretaker_phone": "+91 9123456789",
-                "available_units": 12,
-                "total_units": 30,
-                "amenities": ["WiFi", "Power Backup", "Lift", "Parking"],
-                "pg_options": [
-                    {"sharing": "Single", "furnishing": "Fully Furnished", "price": 18000},
-                    {"sharing": "Double", "furnishing": "Semi Furnished", "price": 12000},
-                    {"sharing": "Triple", "furnishing": "Fully Furnished", "price": 9000},
-                ],
-                "rental_options": [
-                    {"type": "1 RK", "balcony": False, "furnishing": "Semi Furnished", "price": 15000},
-                    {"type": "1 BHK", "balcony": True, "furnishing": "Fully Furnished", "price": 28000},
-                    {"type": "2 BHK", "balcony": True, "furnishing": "Semi Furnished", "price": 38000},
-                ],
-                "preferred_for": "Anyone",
-                "listed_date": "15 May 2026",
-                "youtube_link": "",
-            },
-        ]
-
-        for item in defaults:
-            prop = Property(**item)
-            db.add(prop)
-        db.commit()
+        # Prevent seeding fake properties as per requirements
+        pass

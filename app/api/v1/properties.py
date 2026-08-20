@@ -1,6 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import shutil
+import os
+import uuid
+
 from app.database.database import get_db
 from app.schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse, PaginatedPropertyResponse
 from app.services.property_service import PropertyService
@@ -22,7 +26,7 @@ def get_properties(
     priceRange: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
     return PropertyService.get_all_properties(
@@ -104,3 +108,21 @@ def restore_property(
         db, current_user.id, current_user.name or "Admin", "Restored Property", "Property", str(property_id)
     )
     return {"message": "Property restored successfully"}
+
+@router.post("/upload", status_code=status.HTTP_201_CREATED)
+def upload_property_image(
+    file: UploadFile = File(...),
+    current_user: Employee = Depends(get_current_admin_user)
+):
+    try:
+        os.makedirs("uploads/images", exist_ok=True)
+        ext = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4().hex}{ext}"
+        file_path = f"uploads/images/{unique_filename}"
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        return {"url": f"/{file_path}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

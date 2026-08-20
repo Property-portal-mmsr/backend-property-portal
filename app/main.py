@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 from app.database.database import Base, engine, SessionLocal, sync_table_schema, get_db
 from app.models.employee import Employee
@@ -45,6 +47,10 @@ app.add_middleware(
 
 # Include v1 API router
 app.include_router(api_router)
+
+# Mount uploads directory
+os.makedirs("uploads/images", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.on_event("startup")
