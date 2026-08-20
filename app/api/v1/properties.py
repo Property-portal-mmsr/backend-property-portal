@@ -15,7 +15,9 @@ from app.models.employee import Employee
 router = APIRouter(prefix="/properties", tags=["Properties"])
 
 
-@router.get("", response_model=PaginatedPropertyResponse)
+from fastapi.responses import JSONResponse
+
+@router.get("")
 def get_properties(
     location: Optional[str] = Query(None),
     propertyType: Optional[str] = Query(None),
@@ -29,7 +31,7 @@ def get_properties(
     limit: int = Query(10, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
-    return PropertyService.get_all_properties(
+    res = PropertyService.get_all_properties(
         db=db,
         location=location,
         propertyType=propertyType,
@@ -42,6 +44,8 @@ def get_properties(
         skip=skip,
         limit=limit
     )
+    # Bypass slow FastAPI jsonable_encoder for large lists
+    return JSONResponse(content=res.dict())
 
 
 @router.get("/{property_id}", response_model=PropertyResponse)

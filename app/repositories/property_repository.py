@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional
 from app.models.property import Property
 from app.schemas.property import PropertyCreate, PropertyUpdate
@@ -48,7 +48,11 @@ class PropertyRepository:
                 query = query.filter(Property.available_units > 20)
                 
         # We order by ID descending to get latest properties first
-        return query.order_by(Property.id.desc()).all()
+        return query.options(
+            selectinload(Property.property_pricing),
+            selectinload(Property.property_images),
+            selectinload(Property.property_amenities)
+        ).order_by(Property.id.desc()).all()
 
     @staticmethod
     def get_by_id(db: Session, property_id: int) -> Optional[Property]:
