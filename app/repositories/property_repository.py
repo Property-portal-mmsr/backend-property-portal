@@ -13,93 +13,215 @@ class PropertyRepository:
         location: Optional[str] = None,
         propertyType: Optional[str] = None,
         category: Optional[str] = None,
+        categories: Optional[List[str]] = None,
+        sharingType: Optional[str] = None,
+        unitType: Optional[str] = None,
+        balcony: Optional[str] = None,
         furnishing: Optional[str] = None,
         status: Optional[str] = None,
         units: Optional[str] = None,
         priceRange: Optional[str] = None,
+        minPrice: Optional[float] = None,
+        maxPrice: Optional[float] = None,
         search: Optional[str] = None,
+        sort: Optional[str] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Property], int]:
         query = db.query(Property)
         
-        if search:
-            search_term = f"%{search.lower()}%"
+        # 1. Search
+        if search and search.strip():
+            term = f"%{search.strip().lower()}%"
             query = query.filter(
                 or_(
-                    func.lower(Property.property_name).like(search_term),
-                    func.lower(Property.location).like(search_term),
-                    func.lower(Property.property_id).like(search_term)
+                    func.lower(Property.property_name).like(term),
+                    func.lower(Property.property_id).like(term),
+                    func.lower(Property.location).like(term),
+                    func.lower(Property.city).like(term),
+                    func.lower(Property.address).like(term),
+                    func.lower(Property.owner_name).like(term),
                 )
             )
 
-        if location:
-            query = query.filter(Property.location == location)
-            
-        if category:
-            query = query.filter(Property.category == category)
-            
-        if status:
-            query = query.filter(Property.status == status)
-            
-        if propertyType:
+        # 2. Location
+        if location and location.strip():
+            loc_term = f"%{location.strip().lower()}%"
             query = query.filter(
                 or_(
-                    Property.property_type == propertyType,
-                    cast(Property.rental_options, String).like(f'%"type": "{propertyType}"%'),
-                    cast(Property.rental_options, String).like(f"%'type': '{propertyType}'%")
+                    func.lower(Property.location).like(loc_term),
+                    func.lower(Property.city).like(loc_term),
+                    func.lower(Property.state).like(loc_term),
+                    func.lower(Property.address).like(loc_term),
                 )
             )
 
-        if furnishing:
+        # 3. Categories (Multi-category OR logic)
+        cat_list = []
+        if categories:
+            if isinstance(categories, str):
+                cat_list = [c.strip() for c in categories.split(",") if c.strip()]
+            elif isinstance(categories, list):
+                for item in categories:
+                    if isinstance(item, str):
+                        cat_list.extend([c.strip() for c in item.split(",") if c.strip()])
+                    elif item:
+                        cat_list.append(str(item).strip())
+        elif category and category.strip():
+            cat_list = [c.strip() for c in category.split(",") if c.strip()]
+
+        if cat_list:
+            cat_filters = []
+            for cat in cat_list:
+                cat_filters.append(Property.category == cat)
+                cat_filters.append(cast(Property.categories, String).like(f'%"category": "{cat}"%'))
+                cat_filters.append(cast(Property.categories, String).like(f'%"{cat}"%'))
+            query = query.filter(or_(*cat_filters))
+
+        # 4. Status
+        if status and status.strip() and status != "All Status":
+            query = query.filter(func.lower(Property.status) == status.strip().lower())
+
+        # 5. PG Sharing Type
+        if sharingType and sharingType.strip():
+            st = sharingType.strip()
             query = query.filter(
                 or_(
-                    Property.furnishing == furnishing,
-                    cast(Property.pg_options, String).like(f'%"furnishing": "{furnishing}"%'),
-                    cast(Property.pg_options, String).like(f"%'furnishing': '{furnishing}'%"),
-                    cast(Property.rental_options, String).like(f'%"furnishing": "{furnishing}"%'),
-                    cast(Property.rental_options, String).like(f"%'furnishing': '{furnishing}'%")
+                    cast(Property.pg_options, String).like(f'%"sharing": "{st}"%'),
+                    cast(Property.pg_options, String).like(f"%'sharing': '{st}'%")
                 )
             )
-            
-        if units:
-            if units == "1-5 Units":
-                query = query.filter(Property.available_units >= 1, Property.available_units <= 5)
-            elif units == "6-10 Units":
-                query = query.filter(Property.available_units >= 6, Property.available_units <= 10)
-            elif units == "11-20 Units":
-                query = query.filter(Property.available_units >= 11, Property.available_units <= 20)
-            elif units == "20+ Units":
-                query = query.filter(Property.available_units > 20)
 
+        # 6. Rental Unit Type
+        target_unit_type = unitType or propertyType
+        if target_unit_type and target_unit_type.strip():
+            ut = target_unit_type.strip()
+            query = query.filter(
+                or_(
+                    Property.property_type == ut,
+                    cast(Property.property_type, String).like(f'%{ut}%'),
+                    cast(Property.rental_options, String).like(f'%"unitType": "{ut}"%'),
+                    cast(Property.rental_options, String).like(f'%"type": "{ut}"%'),
+                    cast(Property.rental_options, String).like(f"%'unitType': '{ut}'%"),
+                    cast(Property.rental_options, String).like(f"%'type': '{ut}'%")
+                )
+            )
+
+        # 7. Balcony
+        if balcony and balcony.strip():
+            b = balcony.strip()
+            query = query.filter(
+                or_(
+                    cast(Property.rental_options, String).like(f'%"balcony": "{b}"%'),
+                    cast(Property.rental_options, String).like(f"%'balcony': '{b}'%")
+                )
+            )
+
+        # 8. Furnishing
+        if furnishing and furnishing.strip():
+            f = furnishing.strip()
+            query = query.filter(
+                or_(
+                    Property.furnishing == f,
+                    cast(Property.pg_options, String).like(f'%"furnishing": "{f}"%'),
+                    cast(Property.pg_options, String).like(f"%'furnishing': '{f}'%"),
+                    cast(Property.rental_options, String).like(f'%"furnishing": "{f}"%'),
+                    cast(Property.rental_options, String).like(f"%'furnishing': '{f}'%")
+                )
+            )
+
+        # 9. Price Filtering & Pagination Execution
+        low_price = minPrice
+        high_price = maxPrice
         if priceRange:
-            # Join PropertyPricing to filter by price
-            query = query.outerjoin(PropertyPricing, PropertyPricing.property_id == Property.id)
-            
-            # Using coalesce to fallback to single_price or 0 if starting_price is null
-            min_price_expr = func.coalesce(PropertyPricing.starting_price, PropertyPricing.single_price, 0)
-            
-            if priceRange == "₹5,000 - ₹10,000":
-                query = query.filter(min_price_expr >= 5000, min_price_expr <= 10000)
-            elif priceRange == "₹10,001 - ₹15,000":
-                query = query.filter(min_price_expr >= 10001, min_price_expr <= 15000)
-            elif priceRange == "₹15,001 - ₹20,000":
-                query = query.filter(min_price_expr >= 15001, min_price_expr <= 20000)
-            elif priceRange == "₹20,001 - ₹30,000":
-                query = query.filter(min_price_expr >= 20001, min_price_expr <= 30000)
-            elif priceRange == "₹30,001+":
-                query = query.filter(min_price_expr >= 30001)
+            if priceRange == "Under ₹10,000" or priceRange == "₹5,000 - ₹10,000":
+                low_price, high_price = 0, 10000
+            elif priceRange == "₹10,000 - ₹20,000" or priceRange == "₹10,001 - ₹15,000" or priceRange == "₹15,001 - ₹20,000":
+                low_price, high_price = 10000, 20000
+            elif priceRange == "₹20,000 - ₹35,000" or priceRange == "₹20,001 - ₹30,000":
+                low_price, high_price = 20000, 35000
+            elif priceRange == "₹35,000+" or priceRange == "₹30,001+":
+                low_price, high_price = 35000, 99999999
 
-        # Count total rows matching criteria
-        total = query.count()
-                
-        # We order by ID descending to get latest properties first, then paginate
-        items = query.options(
+        if low_price is not None or high_price is not None:
+            low = low_price if low_price is not None else 0
+            high = high_price if high_price is not None else 999999999.0
+
+            all_candidates = query.options(
+                selectinload(Property.property_pricing),
+                selectinload(Property.property_images),
+                selectinload(Property.property_amenities)
+            ).distinct().all()
+
+            def matches_price_range(p: Property) -> bool:
+                if p.property_pricing:
+                    sp = p.property_pricing.starting_price or p.property_pricing.single_price
+                    if sp is not None and low <= float(sp) <= high:
+                        return True
+
+                if p.pg_options:
+                    for v in p.pg_options:
+                        rent = v.get("rent") if v.get("rent") is not None else v.get("price")
+                        if rent is not None:
+                            try:
+                                if low <= float(rent) <= high:
+                                    return True
+                            except (ValueError, TypeError):
+                                pass
+
+                if p.rental_options:
+                    for v in p.rental_options:
+                        rent = v.get("rent") if v.get("rent") is not None else v.get("price")
+                        if rent is not None:
+                            try:
+                                if low <= float(rent) <= high:
+                                    return True
+                            except (ValueError, TypeError):
+                                pass
+
+                return False
+
+            matching_props = [p for p in all_candidates if matches_price_range(p)]
+
+            if sort == "price-low":
+                matching_props.sort(key=lambda p: (p.property_pricing.starting_price if p.property_pricing and p.property_pricing.starting_price is not None else 99999999))
+            elif sort == "price-high":
+                matching_props.sort(key=lambda p: (p.property_pricing.starting_price if p.property_pricing and p.property_pricing.starting_price is not None else 0), reverse=True)
+            elif sort == "name":
+                matching_props.sort(key=lambda p: (p.property_name or "").lower())
+            else:
+                matching_props.sort(key=lambda p: p.id, reverse=True)
+
+            total = len(matching_props)
+            items = matching_props[skip:skip+limit]
+            return items, total
+
+        total = query.distinct().count()
+
+        # 10. Default Query Execution & Sorting
+        items_all = query.options(
             selectinload(Property.property_pricing),
             selectinload(Property.property_images),
             selectinload(Property.property_amenities)
-        ).order_by(Property.id.desc()).offset(skip).limit(limit).all()
+        ).distinct().all()
 
+        def has_valid_images(p: Property) -> bool:
+            if getattr(p, 'property_images', None) and len([img for img in p.property_images if getattr(img, 'image_url', None) and not getattr(img, 'is_deleted', False)]) > 0:
+                return True
+            if isinstance(p.images, list) and len([u for u in p.images if u]) > 0:
+                return True
+            return False
+
+        if sort == "price-low":
+            items_all.sort(key=lambda p: (0 if has_valid_images(p) else 1, p.property_pricing.starting_price if p.property_pricing and p.property_pricing.starting_price is not None else 99999999))
+        elif sort == "price-high":
+            items_all.sort(key=lambda p: (0 if has_valid_images(p) else 1, -(p.property_pricing.starting_price if p.property_pricing and p.property_pricing.starting_price is not None else 0)))
+        elif sort == "name":
+            items_all.sort(key=lambda p: (0 if has_valid_images(p) else 1, (p.property_name or "").lower()))
+        else:
+            items_all.sort(key=lambda p: (0 if has_valid_images(p) else 1, -p.id))
+
+        items = items_all[skip:skip+limit]
         return items, total
 
     @staticmethod
@@ -119,6 +241,9 @@ class PropertyRepository:
         onboarded_by_name = prop_data.onboardedBy.name if hasattr(prop_data, 'onboardedBy') and prop_data.onboardedBy else None
         onboarded_by_phone = prop_data.onboardedBy.phone if hasattr(prop_data, 'onboardedBy') and prop_data.onboardedBy else None
 
+        cats = prop_data.categories if (hasattr(prop_data, 'categories') and prop_data.categories) else ([prop_data.category] if prop_data.category else [])
+        primary_cat = cats[0] if cats else prop_data.category
+
         new_prop = Property(
             property_id=prop_data.propertyId,
             property_name=prop_data.name,
@@ -131,7 +256,8 @@ class PropertyRepository:
             furnishing=prop_data.furnishing,
             other_specifications=prop_data.otherSpecifications,
             property_type=prop_data.propertyType,
-            category=prop_data.category,
+            category=primary_cat,
+            categories=cats,
             location=prop_data.location,
             address=prop_data.address,
             status=prop_data.status,
@@ -191,6 +317,7 @@ class PropertyRepository:
             "otherSpecifications": "other_specifications",
             "propertyType": "property_type",
             "category": "category",
+            "categories": "categories",
             "location": "location",
             "address": "address",
             "status": "status",

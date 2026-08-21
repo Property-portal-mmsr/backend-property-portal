@@ -20,6 +20,7 @@ class Property(Base):
     other_specifications = Column(JSON, default=dict)
     property_type = Column(String(100), nullable=True)
     category = Column(String(100), nullable=True)
+    categories = Column(JSON, default=list)
     location = Column(String(255), nullable=True)
     address = Column(String(500), nullable=True)
     status = Column(String(50), nullable=True)

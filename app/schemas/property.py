@@ -38,6 +38,7 @@ class PropertyCreate(BaseModel):
     otherSpecifications: Optional[Dict[str, Any]] = None
     propertyType: Optional[str] = None
     category: Optional[str] = None
+    categories: Optional[List[str]] = []
     location: Optional[str] = None
     address: Optional[str] = None
     status: Optional[str] = None
@@ -70,6 +71,7 @@ class PropertyUpdate(BaseModel):
     otherSpecifications: Optional[Dict[str, Any]] = None
     propertyType: Optional[str] = None
     category: Optional[str] = None
+    categories: Optional[List[str]] = None
     location: Optional[str] = None
     address: Optional[str] = None
     status: Optional[str] = None
@@ -103,6 +105,7 @@ class PropertyResponse(BaseModel):
     otherSpecifications: Optional[Dict[str, Any]]
     propertyType: Optional[str]
     category: Optional[str]
+    categories: List[str] = []
     location: Optional[str]
     address: Optional[str]
     status: Optional[str]
@@ -124,6 +127,26 @@ class PropertyResponse(BaseModel):
 
     @classmethod
     def from_db(cls, prop) -> "PropertyResponse":
+        # Extract images from relationship first, then JSON column
+        extracted_images = []
+        if getattr(prop, 'property_images', None):
+            extracted_images = [
+                img.image_url for img in prop.property_images 
+                if getattr(img, 'image_url', None) and not getattr(img, 'is_deleted', False)
+            ]
+
+        if not extracted_images and prop.images:
+            if isinstance(prop.images, list):
+                extracted_images = [str(url) for url in prop.images if url]
+            elif isinstance(prop.images, str) and prop.images.strip():
+                try:
+                    import json
+                    parsed = json.loads(prop.images)
+                    if isinstance(parsed, list):
+                        extracted_images = [str(url) for url in parsed if url]
+                except Exception:
+                    extracted_images = [prop.images.strip()]
+
         return cls(
             id=prop.id,
             propertyId=prop.property_id or f"PRP{prop.id + 1000}",
@@ -138,6 +161,7 @@ class PropertyResponse(BaseModel):
             otherSpecifications=prop.other_specifications if isinstance(prop.other_specifications, dict) else {},
             propertyType=prop.property_type,
             category=prop.category,
+            categories=prop.categories if getattr(prop, 'categories', None) else ([prop.category] if prop.category else []),
             location=prop.location,
             address=prop.address,
             status=prop.status,
@@ -148,7 +172,7 @@ class PropertyResponse(BaseModel):
                 triple=float(prop.property_pricing.triple_price) if prop.property_pricing and prop.property_pricing.triple_price is not None else None,
                 private=float(prop.property_pricing.private_price) if prop.property_pricing and prop.property_pricing.private_price is not None else None,
             ) if prop.property_pricing else None,
-            images=[img.image_url for img in prop.property_images] if getattr(prop, 'property_images', None) else (prop.images if isinstance(prop.images, list) else []),
+            images=extracted_images,
             owner=OwnerInfo(
                 name=prop.owner_name,
                 phone=prop.owner_phone,
