@@ -48,6 +48,12 @@ def get_properties(
     return JSONResponse(content=res.dict())
 
 
+@router.get("/locations", response_model=List[str])
+def get_locations(db: Session = Depends(get_db)):
+    from app.repositories.property_repository import PropertyRepository
+    return PropertyRepository.get_unique_locations(db)
+
+
 @router.get("/{property_id}", response_model=PropertyResponse)
 def get_property(property_id: int, db: Session = Depends(get_db)):
     prop = PropertyService.get_property_by_id(db, property_id)
