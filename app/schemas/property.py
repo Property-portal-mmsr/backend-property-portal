@@ -12,6 +12,11 @@ class CaretakerInfo(BaseModel):
     phone: Optional[str] = None
 
 
+class OnboardedByInfo(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+
 class PriceInfo(BaseModel):
     starting: Optional[float] = None
     single: Optional[float] = None
@@ -39,6 +44,7 @@ class PropertyCreate(BaseModel):
     images: List[str] = []
     owner: Optional[OwnerInfo] = None
     caretaker: Optional[CaretakerInfo] = None
+    onboardedBy: Optional[OnboardedByInfo] = None
     availableUnits: Optional[int] = None
     totalUnits: Optional[int] = None
     amenities: List[str] = []
@@ -70,6 +76,7 @@ class PropertyUpdate(BaseModel):
     images: Optional[List[str]] = None
     owner: Optional[OwnerInfo] = None
     caretaker: Optional[CaretakerInfo] = None
+    onboardedBy: Optional[OnboardedByInfo] = None
     availableUnits: Optional[int] = None
     totalUnits: Optional[int] = None
     amenities: Optional[List[str]] = None
@@ -103,6 +110,7 @@ class PropertyResponse(BaseModel):
     images: List[str]
     owner: Optional[OwnerInfo]
     caretaker: Optional[CaretakerInfo]
+    onboardedBy: Optional[OnboardedByInfo]
     availableUnits: Optional[int]
     totalUnits: Optional[int]
     amenities: List[str]
@@ -148,6 +156,10 @@ class PropertyResponse(BaseModel):
             caretaker=CaretakerInfo(
                 name=prop.caretaker_name,
                 phone=prop.caretaker_phone,
+            ),
+            onboardedBy=OnboardedByInfo(
+                name=prop.onboarded_by_name,
+                phone=prop.onboarded_by_phone,
             ),
             availableUnits=prop.available_units,
             totalUnits=prop.total_units,
