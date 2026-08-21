@@ -1,21 +1,26 @@
 from sqlalchemy.orm import Session, selectinload
-from typing import List, Optional
-from app.models.property import Property
+from typing import List, Optional, Tuple
+from app.models.property import Property, PropertyPricing
 from app.schemas.property import PropertyCreate, PropertyUpdate
 
 
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, cast, String
 
 class PropertyRepository:
     @staticmethod
     def get_all(
         db: Session,
         location: Optional[str] = None,
+        propertyType: Optional[str] = None,
         category: Optional[str] = None,
+        furnishing: Optional[str] = None,
         status: Optional[str] = None,
-        search: Optional[str] = None,
         units: Optional[str] = None,
-    ) -> List[Property]:
+        priceRange: Optional[str] = None,
+        search: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> Tuple[List[Property], int]:
         query = db.query(Property)
         
         if search:
@@ -37,6 +42,26 @@ class PropertyRepository:
         if status:
             query = query.filter(Property.status == status)
             
+        if propertyType:
+            query = query.filter(
+                or_(
+                    Property.property_type == propertyType,
+                    cast(Property.rental_options, String).like(f'%"type": "{propertyType}"%'),
+                    cast(Property.rental_options, String).like(f"%'type': '{propertyType}'%")
+                )
+            )
+
+        if furnishing:
+            query = query.filter(
+                or_(
+                    Property.furnishing == furnishing,
+                    cast(Property.pg_options, String).like(f'%"furnishing": "{furnishing}"%'),
+                    cast(Property.pg_options, String).like(f"%'furnishing': '{furnishing}'%"),
+                    cast(Property.rental_options, String).like(f'%"furnishing": "{furnishing}"%'),
+                    cast(Property.rental_options, String).like(f"%'furnishing': '{furnishing}'%")
+                )
+            )
+            
         if units:
             if units == "1-5 Units":
                 query = query.filter(Property.available_units >= 1, Property.available_units <= 5)
@@ -46,13 +71,36 @@ class PropertyRepository:
                 query = query.filter(Property.available_units >= 11, Property.available_units <= 20)
             elif units == "20+ Units":
                 query = query.filter(Property.available_units > 20)
+
+        if priceRange:
+            # Join PropertyPricing to filter by price
+            query = query.outerjoin(PropertyPricing, PropertyPricing.property_id == Property.id)
+            
+            # Using coalesce to fallback to single_price or 0 if starting_price is null
+            min_price_expr = func.coalesce(PropertyPricing.starting_price, PropertyPricing.single_price, 0)
+            
+            if priceRange == "₹5,000 - ₹10,000":
+                query = query.filter(min_price_expr >= 5000, min_price_expr <= 10000)
+            elif priceRange == "₹10,001 - ₹15,000":
+                query = query.filter(min_price_expr >= 10001, min_price_expr <= 15000)
+            elif priceRange == "₹15,001 - ₹20,000":
+                query = query.filter(min_price_expr >= 15001, min_price_expr <= 20000)
+            elif priceRange == "₹20,001 - ₹30,000":
+                query = query.filter(min_price_expr >= 20001, min_price_expr <= 30000)
+            elif priceRange == "₹30,001+":
+                query = query.filter(min_price_expr >= 30001)
+
+        # Count total rows matching criteria
+        total = query.count()
                 
-        # We order by ID descending to get latest properties first
-        return query.options(
+        # We order by ID descending to get latest properties first, then paginate
+        items = query.options(
             selectinload(Property.property_pricing),
             selectinload(Property.property_images),
             selectinload(Property.property_amenities)
-        ).order_by(Property.id.desc()).all()
+        ).order_by(Property.id.desc()).offset(skip).limit(limit).all()
+
+        return items, total
 
     @staticmethod
     def get_by_id(db: Session, property_id: int) -> Optional[Property]:
@@ -204,3 +252,9 @@ class PropertyRepository:
     def seed_default_properties(db: Session) -> None:
         # Prevent seeding fake properties as per requirements
         pass
+
+    @staticmethod
+    def get_unique_locations(db: Session) -> List[str]:
+        # Get all distinct non-null locations
+        locations = db.query(Property.location).filter(Property.location != None).filter(Property.location != "").distinct().all()
+        return sorted([loc[0] for loc in locations])
