@@ -29,6 +29,8 @@ class Property(Base):
     owner_phone = Column(String(50), nullable=True)
     caretaker_name = Column(String(100), nullable=True)
     caretaker_phone = Column(String(50), nullable=True)
+    onboarded_by_name = Column(String(100), nullable=True)
+    onboarded_by_phone = Column(String(50), nullable=True)
     available_units = Column(Integer, nullable=True)
     total_units = Column(Integer, nullable=True)
     amenities = Column(JSON, default=list)

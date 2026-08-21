@@ -116,6 +116,8 @@ class PropertyRepository:
         owner_phone = prop_data.owner.phone if prop_data.owner else None
         caretaker_name = prop_data.caretaker.name if prop_data.caretaker else None
         caretaker_phone = prop_data.caretaker.phone if prop_data.caretaker else None
+        onboarded_by_name = prop_data.onboardedBy.name if hasattr(prop_data, 'onboardedBy') and prop_data.onboardedBy else None
+        onboarded_by_phone = prop_data.onboardedBy.phone if hasattr(prop_data, 'onboardedBy') and prop_data.onboardedBy else None
 
         new_prop = Property(
             property_id=prop_data.propertyId,
@@ -138,6 +140,8 @@ class PropertyRepository:
             owner_phone=owner_phone,
             caretaker_name=caretaker_name,
             caretaker_phone=caretaker_phone,
+            onboarded_by_name=onboarded_by_name,
+            onboarded_by_phone=onboarded_by_phone,
             available_units=prop_data.availableUnits,
             total_units=prop_data.totalUnits,
             amenities=prop_data.amenities,
@@ -217,6 +221,12 @@ class PropertyRepository:
                 db_prop.caretaker_name = update_data.caretaker.name
             if update_data.caretaker.phone is not None:
                 db_prop.caretaker_phone = update_data.caretaker.phone
+                
+        if hasattr(update_data, 'onboardedBy') and update_data.onboardedBy:
+            if update_data.onboardedBy.name is not None:
+                db_prop.onboarded_by_name = update_data.onboardedBy.name
+            if update_data.onboardedBy.phone is not None:
+                db_prop.onboarded_by_phone = update_data.onboardedBy.phone
                 
         # Handle pricing update
         if hasattr(update_data, 'price') and update_data.price:
