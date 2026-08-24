@@ -197,9 +197,16 @@ class PropertyResponse(BaseModel):
             lastUpdated=prop.updated_at.strftime("%d %b %Y") if getattr(prop, 'updated_at', None) else None,
         )
 
+class PropertyStatsInfo(BaseModel):
+    total: int
+    active: int
+    inactive: int
+    pending: int
+
 class PaginatedPropertyResponse(BaseModel):
     items: List[PropertyResponse]
     total: int
     page: int
     size: int
     pages: int
+    stats: Optional[PropertyStatsInfo] = None

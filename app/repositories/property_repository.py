@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, selectinload
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 from app.models.property import Property, PropertyPricing
 from app.schemas.property import PropertyCreate, PropertyUpdate
 
@@ -27,7 +27,7 @@ class PropertyRepository:
         sort: Optional[str] = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> Tuple[List[Property], int]:
+    ) -> Tuple[List[Property], int, Dict[str, int]]:
         query = db.query(Property)
         
         # 1. Search
@@ -86,24 +86,20 @@ class PropertyRepository:
         if sharingType and sharingType.strip():
             st = sharingType.strip()
             query = query.filter(
-                or_(
-                    cast(Property.pg_options, String).like(f'%"sharing": "{st}"%'),
-                    cast(Property.pg_options, String).like(f"%'sharing': '{st}'%")
-                )
+                cast(Property.pg_options, String).ilike(f'%{st}%')
             )
 
         # 6. Rental Unit Type
         target_unit_type = unitType or propertyType
         if target_unit_type and target_unit_type.strip():
             ut = target_unit_type.strip()
+            ut_no_space = ut.replace(" ", "").lower()
+            ut_lower = ut.lower()
             query = query.filter(
                 or_(
-                    Property.property_type == ut,
-                    cast(Property.property_type, String).like(f'%{ut}%'),
-                    cast(Property.rental_options, String).like(f'%"unitType": "{ut}"%'),
-                    cast(Property.rental_options, String).like(f'%"type": "{ut}"%'),
-                    cast(Property.rental_options, String).like(f"%'unitType': '{ut}'%"),
-                    cast(Property.rental_options, String).like(f"%'type': '{ut}'%")
+                    func.lower(func.replace(Property.property_type, " ", "")).like(f'%{ut_no_space}%'),
+                    cast(Property.rental_options, String).ilike(f'%{ut_lower}%'),
+                    cast(Property.rental_options, String).ilike(f'%{ut_no_space}%')
                 )
             )
 
@@ -111,10 +107,7 @@ class PropertyRepository:
         if balcony and balcony.strip():
             b = balcony.strip()
             query = query.filter(
-                or_(
-                    cast(Property.rental_options, String).like(f'%"balcony": "{b}"%'),
-                    cast(Property.rental_options, String).like(f"%'balcony': '{b}'%")
-                )
+                cast(Property.rental_options, String).ilike(f'%{b}%')
             )
 
         # 8. Furnishing
@@ -122,11 +115,9 @@ class PropertyRepository:
             f = furnishing.strip()
             query = query.filter(
                 or_(
-                    Property.furnishing == f,
-                    cast(Property.pg_options, String).like(f'%"furnishing": "{f}"%'),
-                    cast(Property.pg_options, String).like(f"%'furnishing': '{f}'%"),
-                    cast(Property.rental_options, String).like(f'%"furnishing": "{f}"%'),
-                    cast(Property.rental_options, String).like(f"%'furnishing': '{f}'%")
+                    func.lower(Property.furnishing) == f.lower(),
+                    cast(Property.pg_options, String).ilike(f'%{f}%'),
+                    cast(Property.rental_options, String).ilike(f'%{f}%')
                 )
             )
 
@@ -193,8 +184,14 @@ class PropertyRepository:
                 matching_props.sort(key=lambda p: p.id, reverse=True)
 
             total = len(matching_props)
+            stats = {
+                "total": total,
+                "active": sum(1 for p in matching_props if (p.status or "").lower() in ["published", "available", "active"]),
+                "inactive": sum(1 for p in matching_props if (p.status or "").lower() == "inactive"),
+                "pending": sum(1 for p in matching_props if (p.status or "").lower() == "pending")
+            }
             items = matching_props[skip:skip+limit]
-            return items, total
+            return items, total, stats
 
         total = query.distinct().count()
 
@@ -221,8 +218,15 @@ class PropertyRepository:
         else:
             items_all.sort(key=lambda p: (0 if has_valid_images(p) else 1, -p.id))
 
+        stats = {
+            "total": total,
+            "active": sum(1 for p in items_all if (p.status or "").lower() in ["published", "available", "active"]),
+            "inactive": sum(1 for p in items_all if (p.status or "").lower() == "inactive"),
+            "pending": sum(1 for p in items_all if (p.status or "").lower() == "pending")
+        }
+
         items = items_all[skip:skip+limit]
-        return items, total
+        return items, total, stats
 
     @staticmethod
     def get_by_id(db: Session, property_id: int) -> Optional[Property]:

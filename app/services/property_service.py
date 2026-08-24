@@ -137,7 +137,7 @@ class PropertyService:
         skip: int = 0,
         limit: int = 100
     ) -> PaginatedPropertyResponse:
-        props, total = PropertyRepository.get_all(
+        props, total, stats = PropertyRepository.get_all(
             db, 
             location=location, 
             propertyType=propertyType,
@@ -166,7 +166,8 @@ class PropertyService:
             total=total,
             page=page,
             size=limit,
-            pages=pages
+            pages=pages,
+            stats=stats
         )
 
     @staticmethod
