@@ -102,7 +102,7 @@ class PropertyRepository:
                     cast(Property.rental_options, String).ilike(f'%{ut_no_space}%')
                 )
             )
-
+ 
         # 7. Balcony
         if balcony and balcony.strip():
             b = balcony.strip()
@@ -208,7 +208,7 @@ class PropertyRepository:
             if isinstance(p.images, list) and len([u for u in p.images if u]) > 0:
                 return True
             return False
-
+ 
         if sort == "price-low":
             items_all.sort(key=lambda p: (0 if has_valid_images(p) else 1, p.property_pricing.starting_price if p.property_pricing and p.property_pricing.starting_price is not None else 99999999))
         elif sort == "price-high":
