@@ -178,23 +178,41 @@ def _apply_filters(
 # Target fetching helper
 # ---------------------------------------------------------------------------
 
+_MONTH_NAMES = [
+    "", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+]
+
+def _month_str_to_name(month_str: str) -> str:
+    """Convert 'YYYY-MM' to full month name, e.g. '2026-08' -> 'August'."""
+    try:
+        _, m = map(int, month_str.split('-'))
+        return _MONTH_NAMES[m]
+    except (ValueError, IndexError):
+        return ""
+
+
 def _get_targets_for_month(db: Session, active_employees: List[Employee], month_str: str) -> Dict[int, float]:
     try:
-        y, m = map(int, month_str.split('-'))
+        y, _ = map(int, month_str.split('-'))
     except ValueError:
         return {}
-    
+
+    month_name = _month_str_to_name(month_str)
+    if not month_name:
+        return {}
+
     if not active_employees:
         return {}
-        
+
     targets = db.query(EmployeeMonthlyTarget).filter(
-        EmployeeMonthlyTarget.month == m,
+        EmployeeMonthlyTarget.month == month_name,
         EmployeeMonthlyTarget.year == y,
         EmployeeMonthlyTarget.employee_id.in_([e.id for e in active_employees])
     ).all()
-    
+
     target_map = {t.employee_id: t.target for t in targets}
-    
+
     # Do not use fallback to employee base target; only use month-specific targets
     final_targets = {}
     for e in active_employees:

@@ -1,3 +1,4 @@
+from sqlalchemy import String
 from sqlalchemy import Column, Integer, Float, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.models.base import Base
@@ -7,7 +8,7 @@ class EmployeeMonthlyTarget(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"), nullable=False, index=True)
-    month = Column(Integer, nullable=False)
+    month = Column(String(50), nullable=False)  # e.g. "August", "September"
     year = Column(Integer, nullable=False)
     target = Column(Float, nullable=False)
 
