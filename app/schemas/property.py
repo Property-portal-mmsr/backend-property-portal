@@ -187,7 +187,7 @@ class PropertyResponse(BaseModel):
             ),
             availableUnits=prop.available_units,
             totalUnits=prop.total_units,
-            amenities=[am.amenity_name for am in prop.property_amenities] if getattr(prop, 'property_amenities', None) else (prop.amenities if isinstance(prop.amenities, list) else []),
+            amenities=prop.amenities if isinstance(prop.amenities, list) and len(prop.amenities) > 0 else ([am.amenity_name for am in prop.property_amenities] if getattr(prop, 'property_amenities', None) else []),
             pgOptions=prop.pg_options if isinstance(prop.pg_options, list) else [],
             rentalOptions=prop.rental_options if isinstance(prop.rental_options, list) else [],
             salesKit=prop.sales_kit if isinstance(prop.sales_kit, dict) else {},

@@ -230,7 +230,16 @@ class PropertyRepository:
 
     @staticmethod
     def get_by_id(db: Session, property_id: int) -> Optional[Property]:
-        return db.query(Property).filter(Property.id == property_id).first()
+        return (
+            db.query(Property)
+            .options(
+                selectinload(Property.property_pricing),
+                selectinload(Property.property_images),
+                selectinload(Property.property_amenities),
+            )
+            .filter(Property.id == property_id)
+            .first()
+        )
 
     @staticmethod
     def get_by_property_id(db: Session, property_id: str) -> Optional[Property]:
@@ -381,8 +390,17 @@ class PropertyRepository:
                 db.add(new_pricing)
 
         db.commit()
-        db.refresh(db_prop)
-        return db_prop
+        # Re-fetch with eager loading so pricing/amenities/images are all fresh
+        return (
+            db.query(Property)
+            .options(
+                selectinload(Property.property_pricing),
+                selectinload(Property.property_images),
+                selectinload(Property.property_amenities),
+            )
+            .filter(Property.id == db_prop.id)
+            .first()
+        )
 
     @staticmethod
     def delete(db: Session, db_prop: Property) -> None:
