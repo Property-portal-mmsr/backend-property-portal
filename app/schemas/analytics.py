@@ -8,6 +8,27 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 
+class IncentiveSlab(BaseModel):
+    target: float
+    incentive: float
+    achieved: bool
+
+
+class TeamLeaderIncentiveTrackerItem(BaseModel):
+    team_leader_name: str
+    team_size: int
+    team_revenue: float
+    team_target: float
+    achievement_percentage: float
+    current_incentive: float
+    current_slab: float
+    next_incentive: Optional[float] = None
+    next_slab_target: Optional[float] = None
+    revenue_remaining: Optional[float] = None
+    beds_sold: float
+    progress_percentage: float
+    slabs: List[IncentiveSlab]
+
 class KPIResponse(BaseModel):
     total_revenue: float
     beds_sold: float
@@ -47,6 +68,7 @@ class LeaderboardItem(BaseModel):
     achievement_pct: float
     remaining_target: float
     incentive: float
+    is_team_leader: bool = False
 
 
 class PerformanceTableItem(BaseModel):
@@ -58,6 +80,8 @@ class PerformanceTableItem(BaseModel):
     remaining_target: float
     incentive: float
     status: str         # "Target Achieved" | "In Progress" | "Needs Improvement"
+    is_team_leader: bool = False
+    next_slab: Optional[float] = None
 
 
 class DashboardResponse(BaseModel):
@@ -67,6 +91,7 @@ class DashboardResponse(BaseModel):
     prev_current_month: PrevCurrentMonthResponse
     leaderboard: List[LeaderboardItem]
     performance_table: List[PerformanceTableItem]
+    team_leader_tracker: List[TeamLeaderIncentiveTrackerItem]
     # Metadata for filter dropdowns
     available_months: List[str]
     available_rms: List[str]

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, Float
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 
@@ -21,5 +21,6 @@ class Employee(Base):
     profile_image = Column(String(255), nullable=True)
     status = Column(String(20), default="ACTIVE")
     must_change_password = Column(Boolean, default=False, nullable=True)
+    monthly_target = Column(Float, nullable=True, default=0.0)
 
     monthly_targets = relationship("EmployeeMonthlyTarget", back_populates="employee", cascade="all, delete-orphan")
