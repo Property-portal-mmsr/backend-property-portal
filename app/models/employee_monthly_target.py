@@ -8,7 +8,7 @@ class EmployeeMonthlyTarget(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     employee_id = Column(Integer, ForeignKey("employees.id", ondelete="CASCADE"), nullable=False, index=True)
-    month = Column(Integer, nullable=False)  # e.g. 8 for August, 9 for September
+    month = Column(String(50), nullable=False)  # e.g. "August", "September"
     year = Column(Integer, nullable=False)
     target = Column(Float, nullable=False)
 

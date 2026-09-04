@@ -14,20 +14,31 @@ class IncentiveSlab(BaseModel):
     achieved: bool
 
 
+class TeamMemberMini(BaseModel):
+    name: str
+    beds: float
+    revenue: float
+    target: float
+    status: str
+
+
 class TeamLeaderIncentiveTrackerItem(BaseModel):
     team_leader_name: str
     team_size: int
+    team_beds: float
     team_revenue: float
     team_target: float
-    achievement_percentage: float
-    current_incentive: float
-    current_slab: float
-    next_incentive: Optional[float] = None
-    next_slab_target: Optional[float] = None
-    revenue_remaining: Optional[float] = None
+    achievement_pct: float
+    slabs: List[IncentiveSlab]
+    current_slab: Optional[float]
+    next_slab_target: Optional[float]
+    revenue_remaining: Optional[float]
+    potential_incentive: Optional[float]
+    incentive: Optional[float]
+    team_members: List[TeamMemberMini] = []
     beds_sold: float
     progress_percentage: float
-    slabs: List[IncentiveSlab]
+
 
 class KPIResponse(BaseModel):
     total_revenue: float

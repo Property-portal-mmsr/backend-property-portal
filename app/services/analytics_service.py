@@ -224,15 +224,19 @@ def _month_str_to_name(month_str: str) -> str:
 
 def _get_targets_for_month(db: Session, active_employees: List[Employee], month_str: str) -> Dict[int, float]:
     try:
-        y, m = map(int, month_str.split('-'))
+        y, _ = map(int, month_str.split('-'))
     except ValueError:
+        return {}
+
+    month_name = _month_str_to_name(month_str)
+    if not month_name:
         return {}
 
     if not active_employees:
         return {}
 
     targets = db.query(EmployeeMonthlyTarget).filter(
-        EmployeeMonthlyTarget.month == m,
+        EmployeeMonthlyTarget.month == month_name,
         EmployeeMonthlyTarget.year == y,
         EmployeeMonthlyTarget.employee_id.in_([e.id for e in active_employees])
     ).all()
@@ -421,7 +425,6 @@ def build_dashboard(
             e for e in active_employees 
             if e.reporting_manager and _names_match(rm_name_norm, e.reporting_manager)
         ]
-        team_members.append(rm_emp)
         
         m_targets_map = current_targets if m_str == current_month_str else prev_targets
         team_target = sum(m_targets_map.get(e.id, 0.0) for e in team_members)
@@ -589,10 +592,10 @@ def build_dashboard(
     # 13. Team Leader Incentive Tracker
     team_leader_tracker: List[TeamLeaderIncentiveTrackerItem] = []
     
-    for name, rev in rm_revenue.items():
-        emp = rm_employee.get(name)
+    for emp in active_employees:
         is_tl, t_rev, t_tgt, t_beds, t_size = _get_team_stats(emp, current_month_str)
         if is_tl and current_month_str.endswith("-09"):
+            base_target = t_tgt
             base_incentive = 15000.0
             slab_6l_target = 600000.0
             slab_6l_incentive = 30000.0
@@ -600,64 +603,87 @@ def build_dashboard(
             slab_7l_incentive = 50000.0
             
             slabs = [
-                IncentiveSlab(target=t_tgt, incentive=base_incentive, achieved=(t_rev >= t_tgt and t_tgt > 0)),
+                IncentiveSlab(target=base_target, incentive=base_incentive, achieved=(t_rev >= base_target)),
                 IncentiveSlab(target=slab_6l_target, incentive=slab_6l_incentive, achieved=(t_rev >= slab_6l_target)),
                 IncentiveSlab(target=slab_7l_target, incentive=slab_7l_incentive, achieved=(t_rev >= slab_7l_target)),
             ]
-            
-            current_incentive = calculate_incentive(
-                revenue=rev,
-                target=_target_for_emp(emp, current_targets, current_month_str),
-                month_str=current_month_str,
-                is_team_leader=is_tl,
-                team_revenue=t_rev,
-                team_target=t_tgt
-            )
             
             if t_rev >= slab_7l_target:
                 current_slab = slab_7l_target
                 next_incentive = None
                 next_slab_target = None
                 revenue_remaining = None
+                incentive_amount = slab_7l_incentive
+                potential_incentive = slab_7l_incentive
             elif t_rev >= slab_6l_target:
                 current_slab = slab_6l_target
                 next_incentive = slab_7l_incentive
                 next_slab_target = slab_7l_target
-                revenue_remaining = max(0.0, slab_7l_target - t_rev)
-            elif t_tgt > 0 and t_rev >= t_tgt:
-                current_slab = t_tgt
+                revenue_remaining = slab_7l_target - t_rev
+                incentive_amount = slab_6l_incentive
+                potential_incentive = slab_7l_incentive
+            elif t_rev >= base_target:
+                current_slab = base_target
                 next_incentive = slab_6l_incentive
                 next_slab_target = slab_6l_target
-                revenue_remaining = max(0.0, slab_6l_target - t_rev)
+                revenue_remaining = slab_6l_target - t_rev
+                incentive_amount = base_incentive
+                potential_incentive = slab_6l_incentive
             else:
-                current_slab = 0.0
+                current_slab = None
                 next_incentive = base_incentive
-                next_slab_target = t_tgt
-                revenue_remaining = max(0.0, t_tgt - t_rev) if t_tgt > 0 else None
+                next_slab_target = base_target
+                revenue_remaining = base_target - t_rev
+                incentive_amount = 0.0
+                potential_incentive = base_incentive
+
+            # Compile team members list
+            rm_name_norm = _normalize_name(emp.name)
+            team_members_list = [
+                e for e in active_employees 
+                if e.reporting_manager and _names_match(rm_name_norm, e.reporting_manager)
+            ]
                 
-            prog_pct = calculate_achievement_pct(t_rev, t_tgt)
-            if t_tgt == 0.0 and current_slab == 0.0:
-                next_incentive = slab_6l_incentive
-                next_slab_target = slab_6l_target
-                revenue_remaining = max(0.0, slab_6l_target - t_rev)
-                prog_pct = calculate_achievement_pct(t_rev, slab_6l_target)
+            team_member_stats = []
+            for m_emp in team_members_list:
+                m_rev = 0.0
+                m_beds = 0.0
+                m_name_norm = _normalize_name(m_emp.name)
+                for sheet_rm_name, rev in rm_revenue.items():
+                    if _names_match(m_name_norm, sheet_rm_name):
+                        m_rev += rev
+                        m_beds += rm_key_count.get(sheet_rm_name, 0)
+                
+                m_tgt = _target_for_emp(m_emp, current_targets, current_month_str)
+                m_ach = calculate_achievement_pct(m_rev, m_tgt)
+                
+                from app.schemas.analytics import TeamMemberMini
+                team_member_stats.append(TeamMemberMini(
+                    name=m_emp.name,
+                    beds=m_beds,
+                    revenue=m_rev,
+                    target=m_tgt,
+                    status=calculate_status(m_ach)
+                ))
 
             progress_percentage = min(100.0, (t_rev / next_slab_target * 100)) if next_slab_target and next_slab_target > 0 else 100.0
             
             team_leader_tracker.append(TeamLeaderIncentiveTrackerItem(
-                team_leader_name=name,
+                team_leader_name=emp.name,
                 team_size=t_size,
+                team_beds=t_beds,
                 team_revenue=t_rev,
                 team_target=t_tgt,
-                achievement_percentage=prog_pct,
-                current_incentive=current_incentive,
+                achievement_pct=calculate_achievement_pct(t_rev, t_tgt),
+                slabs=slabs,
                 current_slab=current_slab,
-                next_incentive=next_incentive,
                 next_slab_target=next_slab_target,
                 revenue_remaining=revenue_remaining,
+                potential_incentive=potential_incentive,
+                incentive=incentive_amount,
+                team_members=team_member_stats,
                 beds_sold=t_beds,
-                progress_percentage=progress_percentage,
-                slabs=slabs
+                progress_percentage=progress_percentage
             ))
             
     team_leader_tracker.sort(key=lambda x: x.team_revenue, reverse=True)
