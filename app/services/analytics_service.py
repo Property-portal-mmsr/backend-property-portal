@@ -350,7 +350,17 @@ def build_dashboard(
     total_revenue = sum(rm_revenue.values())
     total_beds = sum(rm_key_count.values())
 
-    # Overall target = sum of monthly targets of applicable active RMs
+    # Overall target = sum of monthly targets across all applicable months.
+    #
+    # When a specific month is selected:   use that month's targets only.
+    # When "All Time" or a date range:     discover every unique month that
+    #   appears in the filtered records, fetch targets for each, then sum.
+    #   This prevents the old bug of always using only the reference month.
+    #
+    # Per-employee dedup: each employee contributes their target ONCE per
+    # unique month — the target DB already stores one row per employee/month,
+    # so fetching per month and summing is correct.
+
     filtered_employees = active_employees
     if rm_name:
         rm_lower = rm_name.strip().lower()
@@ -358,9 +368,22 @@ def build_dashboard(
             emp for emp in active_employees
             if rm_lower in emp.name.lower()
         ]
-        
-    overall_target = sum(current_targets.get(emp.id, 0.0) for emp in filtered_employees)
-    
+
+    if month:
+        # Specific month selected → single-month target (existing behaviour)
+        overall_target = sum(current_targets.get(emp.id, 0.0) for emp in filtered_employees)
+    else:
+        # All Time or custom date range → sum targets for every unique month
+        # that has at least one record in the *filtered* dataset.
+        unique_months_in_filtered: set[str] = {
+            _record_month(rec) for rec, _ in filtered
+        }
+
+        overall_target = 0.0
+        for m_str in unique_months_in_filtered:
+            m_targets = _get_targets_for_month(db, active_employees, m_str)
+            overall_target += sum(m_targets.get(emp.id, 0.0) for emp in filtered_employees)
+
     # "Active RMs" means how many active employees are in the emp table (matching filters)
     applicable_rms = set(rm_revenue.keys())
     active_rms_count = len(filtered_employees)
