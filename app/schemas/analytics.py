@@ -99,6 +99,7 @@ class DashboardResponse(BaseModel):
     kpis: KPIResponse
     monthly_revenue: List[MonthlyRevenueItem]
     daily_revenue: List[DailyRevenueItem]
+    prev_daily_revenue: List[DailyRevenueItem]
     prev_current_month: PrevCurrentMonthResponse
     leaderboard: List[LeaderboardItem]
     performance_table: List[PerformanceTableItem]

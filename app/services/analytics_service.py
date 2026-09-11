@@ -408,6 +408,23 @@ def build_dashboard(
         for d, r in sorted(daily_map.items())
     ]
 
+    # 9b. Previous Month Daily Revenue — same day-by-day for prev_month
+    prev_daily_map: Dict[str, float] = defaultdict(float)
+    for rec, emp in enriched:
+        if _record_month(rec) != prev_month_str:
+            continue
+        if rm_name:
+            rm_lower = rm_name.strip().lower()
+            name_to_check = emp.name.lower() if emp and emp.name else rec.rm_name.lower()
+            if rm_lower not in name_to_check and name_to_check not in rm_lower:
+                continue
+        prev_daily_map[rec.date.strftime("%Y-%m-%d")] += rec.revenue
+
+    prev_daily_revenue = [
+        DailyRevenueItem(date=d, revenue=r)
+        for d, r in sorted(prev_daily_map.items())
+    ]
+
     def _get_team_stats(rm_emp: Optional[Employee], m_str: str) -> Tuple[bool, float, float, float, int]:
         if not rm_emp:
             return False, 0.0, 0.0, 0.0, 0
@@ -692,6 +709,7 @@ def build_dashboard(
         kpis=kpis,
         monthly_revenue=monthly_revenue,
         daily_revenue=daily_revenue,
+        prev_daily_revenue=prev_daily_revenue,
         prev_current_month=prev_current,
         leaderboard=leaderboard,
         performance_table=performance_rows,
