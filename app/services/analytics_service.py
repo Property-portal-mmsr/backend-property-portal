@@ -369,9 +369,12 @@ def build_dashboard(
             if rm_lower in emp.name.lower()
         ]
 
+    all_months_targets: Dict[str, Dict[int, float]] = {}
     if month:
         # Specific month selected → single-month target (existing behaviour)
         overall_target = sum(current_targets.get(emp.id, 0.0) for emp in filtered_employees)
+        unique_months_in_filtered = {month}
+        all_months_targets[month] = current_targets
     else:
         # All Time or custom date range → sum targets for every unique month
         # that has at least one record in the *filtered* dataset.
@@ -382,7 +385,14 @@ def build_dashboard(
         overall_target = 0.0
         for m_str in unique_months_in_filtered:
             m_targets = _get_targets_for_month(db, active_employees, m_str)
+            all_months_targets[m_str] = m_targets
             overall_target += sum(m_targets.get(emp.id, 0.0) for emp in filtered_employees)
+
+    # Pre-calculate monthly revenue for each RM for incentive calculations
+    rm_monthly_revenue: Dict[Tuple[str, str], float] = defaultdict(float)
+    for rec, emp in filtered:
+        key = emp.name if emp and emp.name else rec.rm_name.strip().title()
+        rm_monthly_revenue[(key, _record_month(rec))] += rec.revenue
 
     # "Active RMs" means how many active employees are in the emp table (matching filters)
     applicable_rms = set(rm_revenue.keys())
@@ -448,7 +458,7 @@ def build_dashboard(
         for d, r in sorted(prev_daily_map.items())
     ]
 
-    def _get_team_stats(rm_emp: Optional[Employee], m_str: str) -> Tuple[bool, float, float, float, int]:
+    def _get_team_stats(rm_emp: Optional[Employee], m_str: str, m_targets_map: Optional[Dict[int, float]] = None) -> Tuple[bool, float, float, float, int]:
         if not rm_emp:
             return False, 0.0, 0.0, 0.0, 0
             
@@ -466,7 +476,8 @@ def build_dashboard(
             if e.reporting_manager and _names_match(rm_name_norm, e.reporting_manager)
         ]
         
-        m_targets_map = current_targets if m_str == current_month_str else prev_targets
+        if m_targets_map is None:
+            m_targets_map = current_targets if m_str == current_month_str else prev_targets
         team_target = sum(m_targets_map.get(e.id, 0.0) for e in team_members)
         
         team_revenue = 0.0
@@ -514,7 +525,7 @@ def build_dashboard(
             emp = rm_map.get(_normalize_name(rm_n))
             rev = sum(r.revenue for r, e in month_records if (e.name if e and e.name else r.rm_name.strip().title()) == rm_n)
             tgt = _target_for_emp(emp, m_targets_map, m_str)
-            is_tl, t_rev, t_tgt, t_beds, _t_size = _get_team_stats(emp, m_str)
+            is_tl, t_rev, t_tgt, t_beds, _t_size = _get_team_stats(emp, m_str, m_targets_map=m_targets_map)
             
             m_incentive += calculate_incentive(
                 revenue=rev,
@@ -540,28 +551,44 @@ def build_dashboard(
         current=curr_comparison,
     )
 
+    latest_month_in_filter = max(unique_months_in_filtered) if unique_months_in_filtered else current_month_str
+
     # 11. Leaderboard — top 3 RMs by revenue from filtered data
     leaderboard_data: List[LeaderboardItem] = []
     for name, rev in rm_revenue.items():
         emp = rm_employee.get(name)
-        target = _target_for_emp(emp, current_targets, current_month_str)
         beds = rm_key_count[name]
-        is_tl, t_rev, t_tgt, t_beds, _t_size = _get_team_stats(emp, current_month_str)
         
+        total_target = 0.0
+        total_incentive = 0.0
+        is_tl_any = False
+        
+        for m_str in unique_months_in_filtered:
+            m_targets = all_months_targets.get(m_str, {})
+            m_target = _target_for_emp(emp, m_targets, m_str)
+            total_target += m_target
+            
+            m_rev = rm_monthly_revenue.get((name, m_str), 0.0)
+            
+            is_tl, t_rev, t_tgt, t_beds, _t_size = _get_team_stats(emp, m_str, m_targets_map=m_targets)
+            if is_tl:
+                is_tl_any = True
+                
+            m_incentive = calculate_incentive(
+                revenue=m_rev,
+                target=m_target,
+                month_str=m_str,
+                is_team_leader=is_tl,
+                team_revenue=t_rev,
+                team_target=t_tgt
+            )
+            total_incentive += m_incentive
+            
         display_rev = rev
-        display_target = target
+        display_target = total_target
         display_beds = beds
         display_ach = calculate_achievement_pct(display_rev, display_target)
         display_remaining = max(0.0, display_target - display_rev)
-        
-        incentive = calculate_incentive(
-            revenue=rev,
-            target=target,
-            month_str=current_month_str,
-            is_team_leader=is_tl,
-            team_revenue=t_rev,
-            team_target=t_tgt
-        )
         
         leaderboard_data.append(
             LeaderboardItem(
@@ -571,8 +598,8 @@ def build_dashboard(
                 target=display_target,
                 achievement_pct=display_ach,
                 remaining_target=display_remaining,
-                incentive=incentive,
-                is_team_leader=is_tl
+                incentive=total_incentive,
+                is_team_leader=is_tl_any
             )
         )
 
@@ -582,33 +609,52 @@ def build_dashboard(
     performance_rows: List[PerformanceTableItem] = []
     for name, rev in rm_revenue.items():
         emp = rm_employee.get(name)
-        target = _target_for_emp(emp, current_targets, current_month_str)
         beds = rm_key_count[name]
-        is_tl, t_rev, t_tgt, t_beds, _t_size = _get_team_stats(emp, current_month_str)
         
+        total_target = 0.0
+        total_incentive = 0.0
+        is_tl_any = False
+        latest_t_rev = 0.0
+        latest_t_tgt = 0.0
+        
+        for m_str in unique_months_in_filtered:
+            m_targets = all_months_targets.get(m_str, {})
+            m_target = _target_for_emp(emp, m_targets, m_str)
+            total_target += m_target
+            
+            m_rev = rm_monthly_revenue.get((name, m_str), 0.0)
+            
+            is_tl, t_rev, t_tgt, t_beds, _t_size = _get_team_stats(emp, m_str, m_targets_map=m_targets)
+            if is_tl:
+                is_tl_any = True
+                if m_str == latest_month_in_filter:
+                    latest_t_rev = t_rev
+                    latest_t_tgt = t_tgt
+                    
+            m_incentive = calculate_incentive(
+                revenue=m_rev,
+                target=m_target,
+                month_str=m_str,
+                is_team_leader=is_tl,
+                team_revenue=t_rev,
+                team_target=t_tgt
+            )
+            total_incentive += m_incentive
+            
         display_rev = rev
-        display_target = target
+        display_target = total_target
         display_beds = beds
         display_ach = calculate_achievement_pct(display_rev, display_target)
         display_remaining = max(0.0, display_target - display_rev)
-        
-        incentive = calculate_incentive(
-            revenue=rev,
-            target=target,
-            month_str=current_month_str,
-            is_team_leader=is_tl,
-            team_revenue=t_rev,
-            team_target=t_tgt
-        )
-        
         status = calculate_status(display_ach)
+        
         next_slab = None
-        if is_tl:
-            if t_tgt > 0 and t_rev < t_tgt:
-                next_slab = t_tgt
-            elif t_rev < 600000.0:
+        if is_tl_any:
+            if latest_t_tgt > 0 and latest_t_rev < latest_t_tgt:
+                next_slab = latest_t_tgt
+            elif latest_t_rev < 600000.0:
                 next_slab = 600000.0
-            elif t_rev < 700000.0:
+            elif latest_t_rev < 700000.0:
                 next_slab = 700000.0
                 
         performance_rows.append(
@@ -619,9 +665,9 @@ def build_dashboard(
                 monthly_target=display_target,
                 achievement_pct=display_ach,
                 remaining_target=display_remaining,
-                incentive=incentive,
+                incentive=total_incentive,
                 status=status,
-                is_team_leader=is_tl,
+                is_team_leader=is_tl_any,
                 next_slab=next_slab
             )
         )
@@ -633,7 +679,7 @@ def build_dashboard(
     team_leader_tracker: List[TeamLeaderIncentiveTrackerItem] = []
     
     for emp in active_employees:
-        is_tl, t_rev, t_tgt, t_beds, t_size = _get_team_stats(emp, current_month_str)
+        is_tl, t_rev, t_tgt, t_beds, t_size = _get_team_stats(emp, current_month_str, m_targets_map=current_targets)
         if is_tl and current_month_str.endswith("-09"):
             base_target = t_tgt
             base_incentive = 15000.0

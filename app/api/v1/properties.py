@@ -9,7 +9,7 @@ from app.database.database import get_db
 from app.schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse, PaginatedPropertyResponse
 from app.services.property_service import PropertyService
 from app.services.audit_service import AuditService
-from app.dependencies import get_current_admin_user
+from app.dependencies import get_current_admin_user, get_current_user
 from app.models.employee import Employee
 
 router = APIRouter(prefix="/properties", tags=["Properties"])
@@ -36,7 +36,8 @@ def get_properties(
     sort: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
 ):
     res = PropertyService.get_all_properties(
         db=db,
@@ -63,13 +64,20 @@ def get_properties(
 
 
 @router.get("/locations", response_model=List[str])
-def get_locations(db: Session = Depends(get_db)):
+def get_locations(
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
     from app.repositories.property_repository import PropertyRepository
     return PropertyRepository.get_unique_locations(db)
 
 
 @router.get("/{property_id}", response_model=PropertyResponse)
-def get_property(property_id: int, db: Session = Depends(get_db)):
+def get_property(
+    property_id: int, 
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
     prop = PropertyService.get_property_by_id(db, property_id)
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")

@@ -6,19 +6,26 @@ from app.schemas.employee import EmployeeCreate, EmployeeUpdate, EmployeeRespons
 from app.schemas.auth import PasswordResetRequest, StatusUpdateRequest
 from app.services.employee_service import EmployeeService
 from app.services.audit_service import AuditService
-from app.dependencies import get_current_admin_user
+from app.dependencies import get_current_admin_user, get_current_user
 from app.models.employee import Employee
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
 
 
 @router.get("", response_model=List[EmployeeResponse])
-def get_employees(db: Session = Depends(get_db)):
+def get_employees(
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
     return EmployeeService.get_all_employees(db)
 
 
 @router.get("/{emp_id}", response_model=EmployeeResponse)
-def get_employee(emp_id: str, db: Session = Depends(get_db)):
+def get_employee(
+    emp_id: str,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
     emp = EmployeeService.get_employee_by_emp_id(db, emp_id)
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
