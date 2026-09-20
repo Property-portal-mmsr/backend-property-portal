@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional, Tuple, Dict
-from app.models.property import Property, PropertyPricing
+from app.models.property import Property, PropertyPricing, PropertyImage
 from app.schemas.property import PropertyCreate, PropertyUpdate
 
 
@@ -346,9 +346,15 @@ class PropertyRepository:
             "youtubeLink": "youtube_link",
         }
 
+        # Fields that are valid even when set to an empty list/dict (i.e. intentional clearing)
+        list_fields = {"images", "amenities", "pgOptions", "rentalOptions", "categories"}
+
         for schema_field, db_field in field_mapping.items():
-            if schema_field in update_dict and update_dict[schema_field] is not None:
-                setattr(db_prop, db_field, update_dict[schema_field])
+            if schema_field in update_dict:
+                value = update_dict[schema_field]
+                # Allow None-skip only for non-list fields; always apply empty-list updates
+                if value is not None or schema_field in list_fields:
+                    setattr(db_prop, db_field, value)
 
         if update_data.owner:
             if update_data.owner.name is not None:
@@ -390,6 +396,34 @@ class PropertyRepository:
                 db.add(new_pricing)
 
         db.commit()
+
+        # --- Synchronize property_images relationship table ---
+        # If the update payload includes an explicit images list, use it as the
+        # authoritative final state. Delete all existing PropertyImage rows for
+        # this property and re-insert them in the correct order.
+        # This is necessary because PropertyResponse.from_db() prioritises the
+        # relationship table over the images JSON column.
+        if "images" in update_dict:
+            final_image_urls: List[str] = update_dict["images"] or []
+
+            # Delete all current PropertyImage rows for this property
+            db.query(PropertyImage).filter(
+                PropertyImage.property_id == db_prop.id
+            ).delete(synchronize_session=False)
+
+            # Insert fresh rows in the submitted order
+            for sort_order, url in enumerate(final_image_urls):
+                if url:  # skip blank/None entries
+                    db.add(PropertyImage(
+                        property_id=db_prop.id,
+                        image_url=url,
+                        is_primary=(sort_order == 0),
+                        sort_order=sort_order,
+                        is_deleted=False,
+                    ))
+
+            db.commit()
+
         # Re-fetch with eager loading so pricing/amenities/images are all fresh
         return (
             db.query(Property)
