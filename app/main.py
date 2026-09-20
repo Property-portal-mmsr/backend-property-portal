@@ -1,7 +1,11 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.database.database import Base, engine, SessionLocal, sync_table_schema, get_db
 from app.models.employee import Employee
@@ -51,6 +55,15 @@ app.include_router(api_router)
 # Mount uploads directory
 os.makedirs("uploads/images", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "An internal server error occurred. Please try again later."},
+    )
 
 
 @app.on_event("startup")

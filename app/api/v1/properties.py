@@ -4,6 +4,9 @@ from typing import List, Optional
 import shutil
 import os
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.database.database import get_db
 from app.schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse, PaginatedPropertyResponse
@@ -104,13 +107,19 @@ def update_property(
     db: Session = Depends(get_db),
     current_user: Employee = Depends(get_current_admin_user),
 ):
-    updated = PropertyService.update_property(db, property_id, prop_data)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Property not found")
-    AuditService.log_action(
-        db, current_user.id, current_user.name or "Admin", "Updated Property", "Property", str(updated.id)
-    )
-    return updated
+    try:
+        updated = PropertyService.update_property(db, property_id, prop_data)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Property not found")
+        AuditService.log_action(
+            db, current_user.id, current_user.name or "Admin", "Updated Property", "Property", str(updated.id)
+        )
+        return updated
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating property {property_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to update property: {str(e)}")
 
 
 @router.delete("/{property_id}", status_code=status.HTTP_204_NO_CONTENT)
