@@ -29,7 +29,7 @@ try:
         MYSQL_URL, 
         pool_pre_ping=True, 
         pool_recycle=60,
-        connect_args={"connect_timeout": 2, "read_timeout": 2, "write_timeout": 2}
+        connect_args={"connect_timeout": 10, "ssl_disabled": True}
     )
     with engine.connect() as conn:
         pass
@@ -92,3 +92,5 @@ def get_db():
         yield db
     finally:
         db.close()
+print('Reloading database.py, connecting to:', MYSQL_URL)
+
