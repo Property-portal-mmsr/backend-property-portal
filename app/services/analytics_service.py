@@ -464,10 +464,9 @@ def build_dashboard(
             
         rm_name_norm = _normalize_name(rm_emp.name)
         
-        is_tl = any(
-            e.reporting_manager and _names_match(rm_name_norm, e.reporting_manager) 
-            for e in active_employees
-        )
+        # Explicitly check if the user is configured as a Team Leader in the database
+        is_tl = bool(rm_emp.is_team_leader)
+        
         if not is_tl:
             return False, 0.0, 0.0, 0.0, 0
             

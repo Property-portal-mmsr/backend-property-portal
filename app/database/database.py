@@ -22,32 +22,31 @@ MYSQL_URL = URL.create(
     port=int(DB_PORT) if DB_PORT else 3306,
     database=DB_NAME,
 )
-SQLITE_URL = "sqlite:///./property_portal.db"
+
+
+MYSQL_CONNECT_ARGS = {"connect_timeout": 10, "ssl_disabled": True}
 
 try:
     engine = create_engine(
-        MYSQL_URL, 
-        pool_pre_ping=True, 
+        MYSQL_URL,
+        pool_pre_ping=True,
         pool_recycle=60,
-        connect_args={"connect_timeout": 10, "ssl_disabled": True}
+        connect_args=MYSQL_CONNECT_ARGS,
     )
     with engine.connect() as conn:
         pass
     logger.info(f"Connected to MySQL database at {DB_HOST}:{DB_PORT}/{DB_NAME}")
     DATABASE_URL = MYSQL_URL
 except Exception as e:
-    if ENVIRONMENT == "development":
-        logger.warning(
-            f"MySQL database unavailable ({e}). Falling back to SQLite local database."
-        )
-        DATABASE_URL = SQLITE_URL
-        engine = create_engine(
-            SQLITE_URL,
-            connect_args={"check_same_thread": False},
-        )
-    else:
-        logger.error(f"Failed to connect to MySQL in {ENVIRONMENT} environment: {e}")
-        raise e
+    logger.critical(
+        f"Cannot connect to MySQL at {DB_HOST}:{DB_PORT}/{DB_NAME}. "
+        "Make sure the SSH tunnel is running: ./start.sh\n"
+        f"Error: {e}"
+    )
+    raise RuntimeError(
+        f"MySQL unavailable – SSH tunnel may be down. Run ./start.sh instead of uvicorn directly.\n{e}"
+    ) from e
+
 
 
 SessionLocal = sessionmaker(
