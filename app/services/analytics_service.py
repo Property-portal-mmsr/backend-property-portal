@@ -472,7 +472,7 @@ def build_dashboard(
             
         team_members = [
             e for e in active_employees 
-            if e.reporting_manager and _names_match(rm_name_norm, e.reporting_manager)
+            if e.reporting_manager and _normalize_name(e.reporting_manager) == rm_name_norm
         ]
         
         if m_targets_map is None:
@@ -726,7 +726,7 @@ def build_dashboard(
             rm_name_norm = _normalize_name(emp.name)
             team_members_list = [
                 e for e in active_employees 
-                if e.reporting_manager and _names_match(rm_name_norm, e.reporting_manager)
+                if e.reporting_manager and _normalize_name(e.reporting_manager) == rm_name_norm
             ]
                 
             team_member_stats = []

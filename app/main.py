@@ -98,3 +98,7 @@ def root_login(
     return AuthService.authenticate_employee(
         db=db, email=credentials.email, password=credentials.password
     )
+@app.get("/api/v1/debug_employees")
+def debug_employees(db=Depends(get_db)):
+    emps = db.query(Employee).all()
+    return [{"name": e.name, "role": e.role, "designation": e.designation, "is_team_leader": e.is_team_leader, "rm": e.reporting_manager} for e in emps]
