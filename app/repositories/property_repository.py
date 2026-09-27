@@ -48,12 +48,7 @@ class PropertyRepository:
         if location and location.strip():
             loc_term = f"%{location.strip().lower()}%"
             query = query.filter(
-                or_(
-                    func.lower(Property.location).like(loc_term),
-                    func.lower(Property.city).like(loc_term),
-                    func.lower(Property.state).like(loc_term),
-                    func.lower(Property.address).like(loc_term),
-                )
+                func.lower(Property.location).like(loc_term)
             )
 
         # 3. Categories mapped to Property Types (Multi-category OR logic)
@@ -462,6 +457,10 @@ class PropertyRepository:
 
     @staticmethod
     def get_unique_locations(db: Session) -> List[str]:
-        # Get all distinct non-null locations
-        locations = db.query(Property.location).filter(Property.location != None).filter(Property.location != "").distinct().all()
-        return sorted([loc[0] for loc in locations])
+        locations = (
+            db.query(Property.location)
+            .filter(Property.location != None, Property.location != "")
+            .distinct()
+            .all()
+        )
+        return sorted([loc[0] for loc in locations if loc[0]])
