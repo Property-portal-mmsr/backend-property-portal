@@ -56,40 +56,130 @@ def calculate_incentive(
     team_target: float = 0.0,
 ) -> float:
     """
-    Incentive slabs:
+    Individual RM incentive slabs (default for non-September):
       >= 3,00,000 -> 1,00,000
       >= 2,00,000 ->   35,000
       >= 1,00,000 ->   20,000
       <  1,00,000 ->        0
+
+    Team Leader incentive slabs (based on team revenue):
+      >= 7,00,000 -> 50,000
+      >= 6,00,000 -> 30,000
+      >= team_target -> 15,000
+      <  team_target ->      0
+
+    September 2026 had special slabs (kept for historical accuracy).
     """
-    if month_str.endswith("-09"):
-        if is_team_leader:
-            if team_revenue >= 700_000:
-                return 50_000.0
-            elif team_revenue >= 600_000:
-                return 30_000.0
-            elif team_target > 0 and team_revenue >= team_target:
-                return 15_000.0
-            else:
-                return 0.0
-        else:
-            if revenue >= 200_000:
-                return 30_000.0
-            elif revenue >= 150_000:
-                return 18_000.0
-            elif target > 0 and revenue >= target:
-                return 12_000.0
-            else:
-                return 0.0
-    else:
-        if revenue >= 300_000:
-            return 100_000.0
-        elif revenue >= 200_000:
-            return 35_000.0
-        elif revenue >= 100_000:
-            return 20_000.0
+def _calculate_incentive_sep(
+    revenue: float,
+    target: float,
+    is_team_leader: bool,
+    team_revenue: float,
+    team_target: float,
+) -> float:
+    # Existing September logic unchanged
+    if is_team_leader:
+        if team_revenue >= 700_000:
+            return 50_000.0
+        elif team_revenue >= 600_000:
+            return 30_000.0
+        elif team_target > 0 and team_revenue >= team_target:
+            return 15_000.0
         else:
             return 0.0
+    else:
+        if revenue >= 200_000:
+            return 30_000.0
+        elif revenue >= 150_000:
+            return 18_000.0
+        elif target > 0 and revenue >= target:
+            return 12_000.0
+        else:
+            return 0.0
+
+def _calculate_incentive_oct(
+    revenue: float,
+    target: float,
+    is_team_leader: bool,
+    team_revenue: float,
+    team_target: float,
+) -> float:
+    # New October logic
+    if is_team_leader:
+        ach_pct = (team_revenue / team_target * 100) if team_target > 0 else 0
+        if ach_pct >= 150.0:
+            return 60_000.0
+        elif ach_pct >= 125.0:
+            return 35_000.0
+        elif ach_pct >= 100.0:
+            return 15_000.0
+        return 0.0
+    else:
+        ach_pct = (revenue / target * 100) if target > 0 else 0
+        if target >= 120_000:
+            # Slab A
+            if ach_pct >= 200.0:
+                return 40_000.0
+            elif ach_pct >= 125.0:
+                return 18_000.0
+            elif ach_pct >= 100.0:
+                return 12_000.0
+            return 0.0
+        elif target >= 55_000:
+            # Slab B
+            if ach_pct >= 130.0:
+                return 10_000.0
+            elif ach_pct >= 100.0:
+                return 5_000.0
+            return 0.0
+        return 0.0
+
+def _calculate_incentive_default(
+    revenue: float,
+    target: float,
+    is_team_leader: bool,
+    team_revenue: float,
+    team_target: float,
+) -> float:
+    # Default fallback slabs (used if month is not configured)
+    if is_team_leader:
+        if team_revenue >= 700_000:
+            return 50_000.0
+        elif team_revenue >= 600_000:
+            return 30_000.0
+        elif team_target > 0 and team_revenue >= team_target:
+            return 15_000.0
+        return 0.0
+    else:
+        if revenue >= target and target > 0:
+            return 12_000.0
+        return 0.0
+
+INCENTIVE_STRATEGIES = {
+    '2026-09': _calculate_incentive_sep,
+    '2026-10': _calculate_incentive_oct,
+}
+
+def calculate_incentive(
+    revenue: float,
+    target: float = 0.0,
+    month_str: str = "",
+    is_team_leader: bool = False,
+    team_revenue: float = 0.0,
+    team_target: float = 0.0,
+) -> float:
+    """
+    Routes incentive calculation to the specific month strategy.
+    """
+    strategy = INCENTIVE_STRATEGIES.get(month_str, _calculate_incentive_default)
+    return strategy(
+        revenue=revenue,
+        target=target,
+        is_team_leader=is_team_leader,
+        team_revenue=team_revenue,
+        team_target=team_target
+    )
+
 
 
 
@@ -361,11 +451,34 @@ def build_dashboard(
     # unique month — the target DB already stores one row per employee/month,
     # so fetching per month and summing is correct.
 
-    filtered_employees = active_employees
+    # Determine which employees are actually relevant for this dashboard view:
+    # 1. Employees who generated revenue in the filtered records
+    revenue_emp_ids = {emp.id for emp in rm_employee.values() if emp}
+    
+    # 2. Employees who have an explicit EmployeeMonthlyTarget record for the current month
+    from app.models.employee_monthly_target import EmployeeMonthlyTarget
+    try:
+        curr_y, curr_m = map(int, current_month_str.split('-'))
+        import calendar
+        month_name = calendar.month_name[curr_m]
+        explicit_targets = db.query(EmployeeMonthlyTarget).filter(
+            EmployeeMonthlyTarget.month == month_name,
+            EmployeeMonthlyTarget.year == curr_y,
+            EmployeeMonthlyTarget.target > 0
+        ).all()
+        explicit_emp_ids = {t.employee_id for t in explicit_targets}
+    except Exception:
+        explicit_emp_ids = set()
+        
+    relevant_emp_ids = revenue_emp_ids | explicit_emp_ids
+    
+    # Base our active RMs only on relevant employees
+    filtered_employees = [e for e in active_employees if e.id in relevant_emp_ids]
+    
     if rm_name:
         rm_lower = rm_name.strip().lower()
         filtered_employees = [
-            emp for emp in active_employees
+            emp for emp in filtered_employees
             if rm_lower in emp.name.lower()
         ]
 
@@ -673,14 +786,145 @@ def build_dashboard(
 
     # Sort by revenue descending
     performance_rows.sort(key=lambda x: x.revenue, reverse=True)
+    
+    # 12b. Top RM Provisional Logic (October specific, without multiplier)
+    if current_month_str == '2026-10':
+        top_rm_count = 0
+        for row in performance_rows:
+            if not row.is_team_leader:
+                top_rm_count += 1
+                row.is_top_rm = True
+                row.top_rm_status = f"Top {top_rm_count} (Provisional)"
+                if top_rm_count >= 2:
+                    break
 
     # 13. Team Leader Incentive Tracker
+    #
+    # FIX: Previously hardcoded to only work for September ("-09").
+    # Now uses Team/TeamMember DB tables with period-based filtering.
+    # All team members appear even with ₹0 revenue (LEFT JOIN logic).
     team_leader_tracker: List[TeamLeaderIncentiveTrackerItem] = []
     
-    for emp in active_employees:
-        is_tl, t_rev, t_tgt, t_beds, t_size = _get_team_stats(emp, current_month_str, m_targets_map=current_targets)
-        if is_tl and current_month_str.endswith("-09"):
-            base_target = t_tgt
+    # Fetch active teams from DB for the current performance period
+    from app.models.team import Team as TeamModel, TeamMember as TeamMemberModel
+    from datetime import date as _date_type
+
+    try:
+        # Parse period boundaries from current_month_str (e.g. "2026-10")
+        _y, _m = map(int, current_month_str.split('-'))
+        import calendar
+        period_start = _date_type(_y, _m, 1)
+        _, last_day = calendar.monthrange(_y, _m)
+        period_end = _date_type(_y, _m, last_day)
+    except (ValueError, IndexError):
+        period_start = date.today().replace(day=1)
+        period_end = date.today()
+
+    # Teams active for this month:
+    #   active_from <= period_end AND (active_until IS NULL OR active_until >= period_start)
+    active_teams = (
+        db.query(TeamModel)
+        .filter(
+            TeamModel.is_active == True,
+            TeamModel.active_from <= period_end,
+        )
+        .all()
+    )
+    # Additional Python filter for active_until
+    active_teams = [
+        t for t in active_teams
+        if t.active_until is None or t.active_until >= period_start
+    ]
+
+    # Build a map: employee_id -> team_name for the RM Performance table
+    emp_team_name_map: Dict[int, str] = {}
+    
+    for team_obj in active_teams:
+        # Get team leader
+        leader = team_obj.leader
+        if not leader:
+            continue
+
+        # Get all team members from the team_members table
+        # LEFT JOIN logic: get ALL assigned members, regardless of whether they have sales
+        db_members = (
+            db.query(TeamMemberModel)
+            .filter(
+                TeamMemberModel.team_id == team_obj.id,
+            )
+            .all()
+        )
+        # Filter by date: member is active during this period
+        db_members = [
+            tm for tm in db_members
+            if (tm.start_date is None or tm.start_date <= period_end) and
+               (tm.end_date is None or tm.end_date >= period_start)
+        ]
+        
+        # Resolve actual Employee objects for the members
+        member_emp_ids = {tm.employee_id for tm in db_members}
+        team_members_list = [e for e in active_employees if e.id in member_emp_ids]
+        
+        # Populate emp_team_name_map for RM Performance table
+        for e in team_members_list:
+            emp_team_name_map[e.id] = team_obj.name
+        
+        t_size = len(team_members_list)
+        
+        # Calculate team target from monthly targets
+        team_target = sum(current_targets.get(e.id, 0.0) for e in team_members_list)
+        
+        # Calculate team revenue/beds from sheet data for this month ONLY
+        # This uses the enriched records filtered to current_month_str
+        team_revenue = 0.0
+        team_beds = 0.0
+        for r, e in enriched:
+            if _record_month(r) == current_month_str:
+                if e and e.id in member_emp_ids:
+                    team_revenue += r.revenue
+                    team_beds += r.key_count
+        
+        # Incentive slabs — dynamic based on month
+        if current_month_str == '2026-10':
+            slab_1_target = team_target
+            slab_1_incentive = 15000.0
+            slab_2_target = team_target * 1.25 if team_target > 0 else 0
+            slab_2_incentive = 35000.0
+            slab_3_target = team_target * 1.50 if team_target > 0 else 0
+            slab_3_incentive = 60000.0
+            
+            slabs = [
+                IncentiveSlab(target=slab_1_target, incentive=slab_1_incentive, achieved=(team_revenue >= slab_1_target) if slab_1_target > 0 else False),
+                IncentiveSlab(target=slab_2_target, incentive=slab_2_incentive, achieved=(team_revenue >= slab_2_target) if slab_2_target > 0 else False),
+                IncentiveSlab(target=slab_3_target, incentive=slab_3_incentive, achieved=(team_revenue >= slab_3_target) if slab_3_target > 0 else False),
+            ]
+            
+            if team_revenue >= slab_3_target and slab_3_target > 0:
+                current_slab = slab_3_target
+                next_slab_target = None
+                revenue_remaining = None
+                incentive_amount = slab_3_incentive
+                potential_incentive = slab_3_incentive
+            elif team_revenue >= slab_2_target and slab_2_target > 0:
+                current_slab = slab_2_target
+                next_slab_target = slab_3_target
+                revenue_remaining = slab_3_target - team_revenue
+                incentive_amount = slab_2_incentive
+                potential_incentive = slab_3_incentive
+            elif team_revenue >= slab_1_target and slab_1_target > 0:
+                current_slab = slab_1_target
+                next_slab_target = slab_2_target
+                revenue_remaining = slab_2_target - team_revenue
+                incentive_amount = slab_1_incentive
+                potential_incentive = slab_2_incentive
+            else:
+                current_slab = None
+                next_slab_target = slab_1_target
+                revenue_remaining = slab_1_target - team_revenue
+                incentive_amount = 0.0
+                potential_incentive = slab_1_incentive
+        else:
+            base_target = team_target
             base_incentive = 15000.0
             slab_6l_target = 600000.0
             slab_6l_incentive = 30000.0
@@ -688,90 +932,96 @@ def build_dashboard(
             slab_7l_incentive = 50000.0
             
             slabs = [
-                IncentiveSlab(target=base_target, incentive=base_incentive, achieved=(t_rev >= base_target)),
-                IncentiveSlab(target=slab_6l_target, incentive=slab_6l_incentive, achieved=(t_rev >= slab_6l_target)),
-                IncentiveSlab(target=slab_7l_target, incentive=slab_7l_incentive, achieved=(t_rev >= slab_7l_target)),
+                IncentiveSlab(target=base_target, incentive=base_incentive, achieved=(team_revenue >= base_target) if base_target > 0 else False),
+                IncentiveSlab(target=slab_6l_target, incentive=slab_6l_incentive, achieved=(team_revenue >= slab_6l_target)),
+                IncentiveSlab(target=slab_7l_target, incentive=slab_7l_incentive, achieved=(team_revenue >= slab_7l_target)),
             ]
             
-            if t_rev >= slab_7l_target:
+            if team_revenue >= slab_7l_target:
                 current_slab = slab_7l_target
-                next_incentive = None
                 next_slab_target = None
                 revenue_remaining = None
                 incentive_amount = slab_7l_incentive
                 potential_incentive = slab_7l_incentive
-            elif t_rev >= slab_6l_target:
+            elif team_revenue >= slab_6l_target:
                 current_slab = slab_6l_target
-                next_incentive = slab_7l_incentive
                 next_slab_target = slab_7l_target
-                revenue_remaining = slab_7l_target - t_rev
+                revenue_remaining = slab_7l_target - team_revenue
                 incentive_amount = slab_6l_incentive
                 potential_incentive = slab_7l_incentive
-            elif t_rev >= base_target:
+            elif base_target > 0 and team_revenue >= base_target:
                 current_slab = base_target
-                next_incentive = slab_6l_incentive
                 next_slab_target = slab_6l_target
-                revenue_remaining = slab_6l_target - t_rev
+                revenue_remaining = slab_6l_target - team_revenue
                 incentive_amount = base_incentive
                 potential_incentive = slab_6l_incentive
             else:
                 current_slab = None
-                next_incentive = base_incentive
-                next_slab_target = base_target
-                revenue_remaining = base_target - t_rev
+                next_slab_target = base_target if base_target > 0 else slab_6l_target
+                revenue_remaining = next_slab_target - team_revenue
                 incentive_amount = 0.0
                 potential_incentive = base_incentive
-
-            # Compile team members list
-            rm_name_norm = _normalize_name(emp.name)
-            team_members_list = [
-                e for e in active_employees 
-                if e.reporting_manager and _normalize_name(e.reporting_manager) == rm_name_norm
-            ]
-                
-            team_member_stats = []
-            for m_emp in team_members_list:
-                m_rev = 0.0
-                m_beds = 0.0
-                m_name_norm = _normalize_name(m_emp.name)
-                for sheet_rm_name, rev in rm_revenue.items():
-                    if _names_match(m_name_norm, sheet_rm_name):
-                        m_rev += rev
-                        m_beds += rm_key_count.get(sheet_rm_name, 0)
-                
-                m_tgt = _target_for_emp(m_emp, current_targets, current_month_str)
-                m_ach = calculate_achievement_pct(m_rev, m_tgt)
-                
-                from app.schemas.analytics import TeamMemberMini
-                team_member_stats.append(TeamMemberMini(
-                    name=m_emp.name,
-                    beds=m_beds,
-                    revenue=m_rev,
-                    target=m_tgt,
-                    status=calculate_status(m_ach)
-                ))
-
-            progress_percentage = min(100.0, (t_rev / next_slab_target * 100)) if next_slab_target and next_slab_target > 0 else 100.0
+            potential_incentive = base_incentive
+        
+        # Compile team members list — LEFT JOIN: show ALL members even with ₹0
+        team_member_stats = []
+        for m_emp in team_members_list:
+            m_rev = 0.0
+            m_beds = 0.0
+            m_name_norm = _normalize_name(m_emp.name)
             
-            team_leader_tracker.append(TeamLeaderIncentiveTrackerItem(
-                team_leader_name=emp.name,
-                team_size=t_size,
-                team_beds=t_beds,
-                team_revenue=t_rev,
-                team_target=t_tgt,
-                achievement_pct=calculate_achievement_pct(t_rev, t_tgt),
-                slabs=slabs,
-                current_slab=current_slab,
-                next_slab_target=next_slab_target,
-                revenue_remaining=revenue_remaining,
-                potential_incentive=potential_incentive,
-                incentive=incentive_amount,
-                team_members=team_member_stats,
-                beds_sold=t_beds,
-                progress_percentage=progress_percentage
+            # Match member revenue from sheet data
+            for sheet_rm_name, rev_val in rm_revenue.items():
+                if _names_match(m_name_norm, sheet_rm_name):
+                    # Only use revenue from the selected month
+                    m_rev += rm_monthly_revenue.get((sheet_rm_name, current_month_str), 0.0)
+                    # Beds from the same month
+                    for r, e in enriched:
+                        if _record_month(r) == current_month_str and e and e.id == m_emp.id:
+                            m_beds += r.key_count
+                    break  # Found match, stop searching
+            
+            m_tgt = _target_for_emp(m_emp, current_targets, current_month_str)
+            m_ach = calculate_achievement_pct(m_rev, m_tgt)
+            
+            from app.schemas.analytics import TeamMemberMini
+            team_member_stats.append(TeamMemberMini(
+                name=m_emp.name,
+                beds=m_beds,
+                revenue=m_rev,
+                target=m_tgt,
+                status=calculate_status(m_ach)
             ))
+
+        progress_percentage = min(100.0, (team_revenue / next_slab_target * 100)) if next_slab_target and next_slab_target > 0 else 100.0
+        
+        team_leader_tracker.append(TeamLeaderIncentiveTrackerItem(
+            team_id=team_obj.id,
+            team_name=team_obj.name,
+            team_leader_name=leader.name,
+            team_size=t_size,
+            team_beds=team_beds,
+            team_revenue=team_revenue,
+            team_target=team_target,
+            achievement_pct=calculate_achievement_pct(team_revenue, team_target),
+            slabs=slabs,
+            current_slab=current_slab,
+            next_slab_target=next_slab_target,
+            revenue_remaining=revenue_remaining,
+            potential_incentive=potential_incentive,
+            incentive=incentive_amount,
+            team_members=team_member_stats,
+            beds_sold=team_beds,
+            progress_percentage=progress_percentage
+        ))
             
     team_leader_tracker.sort(key=lambda x: x.team_revenue, reverse=True)
+
+    # 14. Enrich Performance Table rows with team names
+    for row in performance_rows:
+        emp = rm_employee.get(row.rm_name)
+        if emp and emp.id in emp_team_name_map:
+            row.team_name = emp_team_name_map[emp.id]
 
     return DashboardResponse(
         kpis=kpis,
@@ -785,3 +1035,4 @@ def build_dashboard(
         available_months=all_months,
         available_rms=all_rms,
     )
+

@@ -23,6 +23,8 @@ class TeamMemberMini(BaseModel):
 
 
 class TeamLeaderIncentiveTrackerItem(BaseModel):
+    team_id: int
+    team_name: str
     team_leader_name: str
     team_size: int
     team_beds: float
@@ -93,6 +95,9 @@ class PerformanceTableItem(BaseModel):
     status: str         # "Target Achieved" | "In Progress" | "Needs Improvement"
     is_team_leader: bool = False
     next_slab: Optional[float] = None
+    team_name: Optional[str] = None   # e.g. "Team Arun N", "Team Gowtham N"
+    is_top_rm: bool = False
+    top_rm_status: Optional[str] = None
 
 
 class DashboardResponse(BaseModel):

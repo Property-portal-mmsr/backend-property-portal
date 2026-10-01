@@ -14,6 +14,7 @@ from app.models.owner import Owner
 from app.models.property import Property
 from app.models.audit_log import AuditLog
 from app.models.password_reset_request import PasswordResetRequest
+from app.models.team import Team, TeamMember
 from app.repositories.property_repository import PropertyRepository
 
 from app.repositories.employee_repository import EmployeeRepository

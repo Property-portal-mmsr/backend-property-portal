@@ -27,6 +27,7 @@ import app.models.employee_monthly_target
 import app.models.owner
 import app.models.property
 import app.models.audit_log
+import app.models.team
 import app.models.password_reset_request
 
 target_metadata = Base.metadata
