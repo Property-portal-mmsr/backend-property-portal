@@ -642,16 +642,42 @@ def build_dashboard(
             
         rm_name_norm = _normalize_name(rm_emp.name)
         
-        # Explicitly check if the user is configured as a Team Leader in the database
-        is_tl = bool(rm_emp.is_team_leader)
-        
-        if not is_tl:
+        # Parse period from m_str
+        from datetime import date
+        try:
+            _y, _m = map(int, m_str.split('-'))
+            import calendar
+            period_start = date(_y, _m, 1)
+            _, last_day = calendar.monthrange(_y, _m)
+            period_end = date(_y, _m, last_day)
+        except Exception:
             return False, 0.0, 0.0, 0.0, 0
             
+        # Find if this employee leads any team active during this month
+        from app.models.team import Team, TeamMember
+        team_obj = db.query(Team).filter(
+            Team.leader_id == rm_emp.id,
+            Team.is_active == True,
+            Team.active_from <= period_end
+        ).first()
+        
+        if team_obj and team_obj.active_until and team_obj.active_until < period_start:
+            team_obj = None
+            
+        if not team_obj:
+            return False, 0.0, 0.0, 0.0, 0
+            
+        # Get members active during this month
+        db_members = db.query(TeamMember).filter(TeamMember.team_id == team_obj.id).all()
+        member_ids = set()
+        for tm in db_members:
+            if (tm.start_date is None or tm.start_date <= period_end) and \
+               (tm.end_date is None or tm.end_date >= period_start):
+                member_ids.add(tm.employee_id)
+                
         team_members = [
             e for e in active_employees 
-            if e.reporting_manager and _normalize_name(e.reporting_manager) == rm_name_norm
-            and _is_employee_eligible(e, m_str)
+            if e.id in member_ids and _is_employee_eligible(e, m_str)
         ]
         
         if m_targets_map is None:
@@ -943,6 +969,9 @@ def build_dashboard(
         # Populate emp_team_name_map for RM Performance table
         for e in team_members_list:
             emp_team_name_map[e.id] = team_obj.name
+            
+        # Add the leader to the map so they get the correct team_name in the Performance Table
+        emp_team_name_map[leader.id] = team_obj.name
         
         t_size = len(team_members_list)
         
@@ -1097,6 +1126,14 @@ def build_dashboard(
         if emp and emp.id in emp_team_name_map:
             row.team_name = emp_team_name_map[emp.id]
 
+    from app.schemas.analytics import TeamPerformanceChartItem
+    team_performance_chart = [
+        TeamPerformanceChartItem(
+            team_name=t.team_name,
+            revenue=t.team_revenue
+        ) for t in team_leader_tracker
+    ]
+
     return DashboardResponse(
         kpis=kpis,
         monthly_revenue=monthly_revenue,
@@ -1106,6 +1143,7 @@ def build_dashboard(
         leaderboard=leaderboard,
         performance_table=performance_rows,
         team_leader_tracker=team_leader_tracker,
+        team_performance=team_performance_chart,
         available_months=available_months,
         available_rms=all_rms,
     )

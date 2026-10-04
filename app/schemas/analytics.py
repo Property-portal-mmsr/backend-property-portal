@@ -42,6 +42,11 @@ class TeamLeaderIncentiveTrackerItem(BaseModel):
     progress_percentage: float
 
 
+class TeamPerformanceChartItem(BaseModel):
+    team_name: str
+    revenue: float
+
+
 class KPIResponse(BaseModel):
     total_revenue: float
     beds_sold: float
@@ -109,6 +114,8 @@ class DashboardResponse(BaseModel):
     leaderboard: List[LeaderboardItem]
     performance_table: List[PerformanceTableItem]
     team_leader_tracker: List[TeamLeaderIncentiveTrackerItem]
+    team_performance: List[TeamPerformanceChartItem]
     # Metadata for filter dropdowns
     available_months: List[str]
     available_rms: List[str]
+
