@@ -407,7 +407,7 @@ def seed_company_roster():
             {
                 "emp_id": "MMSR26",
                 "name": "Lukmanul Hateem M A",
-                "email": "lukmanul@makemystay.ai",
+                "email": "lukmanul.hakeem@makemystay.ai",
                 "phone": "9840000026",
                 "role": "EMPLOYEE",
                 "status": "ACTIVE",
