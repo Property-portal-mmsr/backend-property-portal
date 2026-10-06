@@ -40,11 +40,19 @@ class TeamLeaderIncentiveTrackerItem(BaseModel):
     team_members: List[TeamMemberMini] = []
     beds_sold: float
     progress_percentage: float
+    team_leader_revenue: float = 0.0
+    team_member_revenue: float = 0.0
+    team_leader_beds: float = 0.0
+    team_member_beds: float = 0.0
+    leader_in_members: bool = False
 
 
 class TeamPerformanceChartItem(BaseModel):
     team_name: str
     revenue: float
+    beds: float = 0.0
+    team_leader_revenue: float = 0.0
+    team_member_revenue: float = 0.0
 
 
 class KPIResponse(BaseModel):
