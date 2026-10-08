@@ -5,7 +5,7 @@ The frontend receives only final computed JSON.
 """
 
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Union
 
 
 class IncentiveSlab(BaseModel):
@@ -45,6 +45,7 @@ class TeamLeaderIncentiveTrackerItem(BaseModel):
     team_leader_beds: float = 0.0
     team_member_beds: float = 0.0
     leader_in_members: bool = False
+    overall_team_revenue: float = 0.0
 
 
 class TeamPerformanceChartItem(BaseModel):
@@ -53,6 +54,7 @@ class TeamPerformanceChartItem(BaseModel):
     beds: float = 0.0
     team_leader_revenue: float = 0.0
     team_member_revenue: float = 0.0
+    overall_team_revenue: float = 0.0
 
 
 class KPIResponse(BaseModel):
@@ -113,6 +115,11 @@ class PerformanceTableItem(BaseModel):
     top_rm_status: Optional[str] = None
 
 
+class EmployeeFilterOption(BaseModel):
+    id: int
+    name: str
+
+
 class DashboardResponse(BaseModel):
     kpis: KPIResponse
     monthly_revenue: List[MonthlyRevenueItem]
@@ -125,5 +132,6 @@ class DashboardResponse(BaseModel):
     team_performance: List[TeamPerformanceChartItem]
     # Metadata for filter dropdowns
     available_months: List[str]
-    available_rms: List[str]
+    available_rms: List[Union[EmployeeFilterOption, str]]
+    available_employees: List[EmployeeFilterOption] = []
 
