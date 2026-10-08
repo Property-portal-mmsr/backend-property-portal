@@ -42,6 +42,11 @@ def get_dashboard(
         example="2026-04",
         pattern=r"^\d{4}-\d{2}$",
     ),
+    employee_id: Optional[int] = Query(
+        None,
+        description="Filter by Employee database ID.",
+        example=6,
+    ),
     rm_name: Optional[str] = Query(
         None,
         description="Filter by RM name (case-insensitive partial match).",
@@ -64,10 +69,37 @@ def get_dashboard(
     Fetch live Google Sheet data, join with active Employee table,
     apply filters, and return fully computed dashboard JSON.
     """
+    MIN_REPORTING_DATE = date(2026, 9, 1)
+
+    if start_date and start_date < MIN_REPORTING_DATE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Start date cannot be earlier than {MIN_REPORTING_DATE.isoformat()}",
+        )
+
+    if end_date and end_date < MIN_REPORTING_DATE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"End date cannot be earlier than {MIN_REPORTING_DATE.isoformat()}",
+        )
+
+    if start_date and end_date and end_date < start_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End date cannot be earlier than start date",
+        )
+
+    if month and month < "2026-09":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reporting month cannot be earlier than September 2026 (2026-09)",
+        )
+
     try:
         return build_dashboard(
             db=db,
             month=month,
+            employee_id=employee_id,
             rm_name=rm_name,
             start_date=start_date,
             end_date=end_date,
@@ -102,6 +134,7 @@ def get_dashboard_filters(
         return {
             "available_months": result.available_months,
             "available_rms": result.available_rms,
+            "available_employees": result.available_employees,
         }
     except RuntimeError as e:
         raise HTTPException(

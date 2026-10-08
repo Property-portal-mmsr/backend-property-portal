@@ -18,6 +18,7 @@ Rules:
 """
 
 import logging
+import re
 from collections import defaultdict
 from datetime import date, datetime
 from typing import Dict, List, Optional, Tuple
@@ -37,7 +38,8 @@ from app.schemas.analytics import (
     PerformanceTableItem,
     PrevCurrentMonthResponse,
     IncentiveSlab,
-    TeamLeaderIncentiveTrackerItem
+    TeamLeaderIncentiveTrackerItem,
+    EmployeeFilterOption
 )
 
 logger = logging.getLogger(__name__)
@@ -263,12 +265,40 @@ def _resolve_rm(sheet_rm: str, rm_map: Dict[str, Employee]) -> Optional[Employee
     return None
 
 
+ABHISHEK_EMP_ID = 981
+PRATIMA_EMP_ID = 982
+
+HISTORICAL_RESIGNED_EMPLOYEES = [
+    Employee(
+        id=ABHISHEK_EMP_ID,
+        emp_id="EMP-981",
+        name="Abhishek",
+        status="ACTIVE",
+        joining_date="2026-06-01",
+        monthly_target=120000.0,
+        role="EMPLOYEE",
+    ),
+    Employee(
+        id=PRATIMA_EMP_ID,
+        emp_id="EMP-982",
+        name="Pratima",
+        status="ACTIVE",
+        joining_date="2026-04-01",
+        monthly_target=120000.0,
+        role="EMPLOYEE",
+    ),
+]
+
+
 def _is_employee_eligible(emp: Optional[Employee], month_str: str) -> bool:
     """
     Check if the employee had joined by the end of the selected reporting month.
     If joining_date is after the end of the month, they are excluded.
     """
     if not emp:
+        return False
+    # Abhishek and Pratima resigned in October 2026; excluded from October 2026 onward active reporting
+    if emp.id in [ABHISHEK_EMP_ID, PRATIMA_EMP_ID] and month_str >= "2026-10":
         return False
     if not emp.joining_date:
         return True  # If no joining date is set, assume they are eligible
@@ -368,6 +398,15 @@ def _get_targets_for_month(db: Session, active_employees: List[Employee], month_
     for e in active_employees:
         # DO NOT fallback to e.monthly_target. If no target for the month, it is 0.0
         final_targets[e.id] = target_map.get(e.id, 0.0)
+
+    # Historical September 2026 targets: Abhishek and Pratima each had ₹1,20,000 target in Sept 2026
+    if month_str == "2026-09":
+        final_targets[ABHISHEK_EMP_ID] = 120000.0
+        final_targets[PRATIMA_EMP_ID] = 120000.0
+    else:
+        final_targets[ABHISHEK_EMP_ID] = 0.0
+        final_targets[PRATIMA_EMP_ID] = 0.0
+
     return final_targets
 
 
@@ -381,10 +420,43 @@ def _target_for_emp(emp: Optional[Employee], targets_map: Dict[int, float], mont
 # Main analytics function
 # ---------------------------------------------------------------------------
 
+def is_eligible_dropdown_designation(designation: Optional[str]) -> bool:
+    """
+    Safely match employee designations for the Performance Analytics filter dropdown.
+    Includes:
+    1. Founder
+    2. Senior Relationship Manager
+    3. R.M (with punctuation/casing/spacing variations e.g. RM, R.M, Relationship Manager)
+    4. City Sales & Ops Manager (with variations like City Sales and Ops Manager, etc.)
+    5. City Manager
+    """
+    if not designation:
+        return False
+    norm = re.sub(r"\s+", " ", designation.replace(".", "").strip().lower())
+    if norm == "founder":
+        return True
+    if norm in ("senior relationship manager", "sr relationship manager", "senior rm", "sr rm"):
+        return True
+    if norm in ("rm", "r m", "relationship manager"):
+        return True
+    if norm in (
+        "city sales & ops manager",
+        "city sales and ops manager",
+        "city sales & operations manager",
+        "city sales and operations manager",
+        "city sales & ops mgr",
+    ):
+        return True
+    if norm == "city manager":
+        return True
+    return False
+
+
 def build_dashboard(
     db: Session,
     month: Optional[str] = None,
     rm_name: Optional[str] = None,
+    employee_id: Optional[int] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
 ) -> DashboardResponse:
@@ -397,7 +469,7 @@ def build_dashboard(
     raw_records = fetch_sheet_records()
 
     # 2. Fetch all active employees from DB
-    active_employees: List[Employee] = (
+    db_active_employees: List[Employee] = (
         db.query(Employee).filter(Employee.status.ilike("ACTIVE")).all()
     )
     
@@ -405,11 +477,22 @@ def build_dashboard(
     # We patch their joining_date in memory (using IDs to avoid name checks) 
     # to ensure the existing eligibility logic correctly excludes them 
     # from historical performance calculations without modifying DB data.
+    active_employees = list(db_active_employees)
     for e in active_employees:
         if e.id in [70, 71]:
             e.joining_date = "2026-10-01"
+
+    # Add historical resigned employees in-memory for accurate historical reporting
+    active_employees = list(active_employees) + HISTORICAL_RESIGNED_EMPLOYEES
             
     rm_map = _build_rm_map(active_employees)
+
+    # Resolve target employee if employee_id filter is specified
+    target_emp: Optional[Employee] = None
+    if employee_id:
+        target_emp = next((e for e in db_active_employees if e.id == employee_id), None)
+        if not target_emp:
+            target_emp = db.query(Employee).filter(Employee.id == employee_id).first()
 
     # 3. Resolve RM for each record & build enriched records
     #    Each enriched record: (SheetRecord, matched_employee | None)
@@ -427,9 +510,25 @@ def build_dashboard(
     FROZEN_REPORTING_PERIODS = {"2026-04", "2026-05", "2026-06", "2026-07", "2026-08"}
     available_months = [m for m in all_months if m not in FROZEN_REPORTING_PERIODS]
     
-    all_rms = sorted(
-        {(emp.name if emp and emp.name else rec.rm_name.strip().title()) for rec, emp in enriched}
-    )
+    # RM Dropdown Filter:
+    # Filter dynamically from the employee database. Only include active employees currently in the DB
+    # whose designation matches:
+    # 1. Founder
+    # 2. Senior Relationship Manager
+    # 3. R.M (including variations like RM, R.M, Relationship Manager)
+    # 4. City Sales & Ops Manager
+    # 5. City Manager
+    # Exclude inactive/resigned/deleted/terminated employees and non-DB employees.
+    eligible_dropdown_employees = [
+        e for e in db_active_employees
+        if is_eligible_dropdown_designation(e.designation)
+    ]
+    eligible_dropdown_employees.sort(key=lambda x: (x.name or "").lower())
+    available_employee_options: List[EmployeeFilterOption] = [
+        EmployeeFilterOption(id=e.id, name=e.name)
+        for e in eligible_dropdown_employees
+        if e.id is not None and e.name
+    ]
 
     # Determine "current month" context for prev/current comparison
     # If month filter is applied, use that as current; else use today
@@ -438,6 +537,8 @@ def build_dashboard(
             reference_date = datetime.strptime(month + "-01", "%Y-%m-%d").date()
         except ValueError:
             reference_date = date.today().replace(day=1)
+    elif start_date:
+        reference_date = start_date.replace(day=1)
     else:
         reference_date = date.today().replace(day=1)
 
@@ -461,6 +562,13 @@ def build_dashboard(
             return False
         if end_date and rec.date > end_date:
             return False
+        if employee_id:
+            if emp:
+                if emp.id != employee_id:
+                    return False
+            else:
+                if not (target_emp and _names_match(target_emp.name, rec.rm_name)):
+                    return False
         if rm_name:
             rm_lower = rm_name.strip().lower()
             name_to_check = emp.name.lower() if emp and emp.name else rec.rm_name.lower()
@@ -529,6 +637,11 @@ def build_dashboard(
     # Exclude employees who have not joined by the current_month_str
     filtered_employees = [e for e in filtered_employees if _is_employee_eligible(e, current_month_str)]
     
+    if employee_id:
+        filtered_employees = [
+            emp for emp in filtered_employees
+            if emp.id == employee_id
+        ]
     if rm_name:
         rm_lower = rm_name.strip().lower()
         filtered_employees = [
@@ -585,7 +698,14 @@ def build_dashboard(
         m_str = _record_month(rec)
         if emp and not _is_employee_eligible(emp, m_str):
             continue
-        # Apply rm_name filter if set, but NOT month/date filters
+        # Apply employee_id / rm_name filter if set, but NOT month/date filters
+        if employee_id:
+            if emp:
+                if emp.id != employee_id:
+                    continue
+            else:
+                if not (target_emp and _names_match(target_emp.name, rec.rm_name)):
+                    continue
         if rm_name:
             rm_lower = rm_name.strip().lower()
             name_to_check = emp.name.lower() if emp and emp.name else rec.rm_name.lower()
@@ -605,6 +725,13 @@ def build_dashboard(
             continue
         if emp and not _is_employee_eligible(emp, current_month_str):
             continue
+        if employee_id:
+            if emp:
+                if emp.id != employee_id:
+                    continue
+            else:
+                if not (target_emp and _names_match(target_emp.name, rec.rm_name)):
+                    continue
         if rm_name:
             rm_lower = rm_name.strip().lower()
             name_to_check = emp.name.lower() if emp and emp.name else rec.rm_name.lower()
@@ -624,6 +751,13 @@ def build_dashboard(
             continue
         if emp and not _is_employee_eligible(emp, prev_month_str):
             continue
+        if employee_id:
+            if emp:
+                if emp.id != employee_id:
+                    continue
+            else:
+                if not (target_emp and _names_match(target_emp.name, rec.rm_name)):
+                    continue
         if rm_name:
             rm_lower = rm_name.strip().lower()
             name_to_check = emp.name.lower() if emp and emp.name else rec.rm_name.lower()
@@ -679,6 +813,31 @@ def build_dashboard(
             e for e in active_employees 
             if e.id in member_ids and _is_employee_eligible(e, m_str)
         ]
+        # Historical September 2026 team assignment: Abhishek -> Team Sanjota, Pratima -> Team Kesava
+        if m_str == "2026-09":
+            emp_dict = {e.id: e for e in active_employees}
+            if team_obj.id == 2 or team_obj.name == "Team Sanjota" or (rm_emp and _names_match(rm_emp.name, "Sanjota")):
+                e_ab = emp_dict.get(ABHISHEK_EMP_ID)
+                if e_ab and e_ab not in team_members:
+                    team_members.append(e_ab)
+            elif team_obj.id == 4 or team_obj.name == "Team Kesava" or (rm_emp and _names_match(rm_emp.name, "Kesava")):
+                e_pr = emp_dict.get(PRATIMA_EMP_ID)
+                if e_pr and e_pr not in team_members:
+                    team_members.append(e_pr)
+        elif m_str >= "2026-10":
+            # October 2026 onward team additions (in-memory, no DB changes)
+            if team_obj.id == 4 or team_obj.name == "Team Kesava" or (rm_emp and _names_match(rm_emp.name, "Kesava")):
+                kesava_new_names = ["midabalam manasa", "kuncha pavani", "vinod kumar"]
+                for e in active_employees:
+                    if e.name and any(k == e.name.lower().strip() or k in e.name.lower() for k in kesava_new_names):
+                        if e not in team_members:
+                            team_members.append(e)
+            elif team_obj.id == 1 or team_obj.name == "Team Arun" or (rm_emp and _names_match(rm_emp.name, "Arun")):
+                arun_new_names = ["raj singh", "dheeraj yadav"]
+                for e in active_employees:
+                    if e.name and any(a == e.name.lower().strip() or a in e.name.lower() for a in arun_new_names):
+                        if e not in team_members:
+                            team_members.append(e)
         
         if m_targets_map is None:
             m_targets_map = current_targets if m_str == current_month_str else prev_targets
@@ -694,7 +853,19 @@ def build_dashboard(
                     # Eligibility is already checked because they are in team_members
                     team_revenue += r.revenue
                     team_beds += r.key_count
-                    
+
+        # Overall Team Revenue & Target includes Team Leader (never double counted)
+        leader_in_members = (rm_emp.id in team_member_ids) or any(
+            _names_match(rm_emp.name, m.name) for m in team_members
+        )
+        if not leader_in_members and rm_emp:
+            team_target += m_targets_map.get(rm_emp.id, 0.0)
+            for r, e in enriched:
+                if _record_month(r) == m_str:
+                    if (e and e.id == rm_emp.id) or (e is None and _names_match(rm_emp.name, r.rm_name)):
+                        team_revenue += r.revenue
+                        team_beds += r.key_count
+
         return True, team_revenue, team_target, team_beds, len(team_members)
 
     # 10. Previous vs Current Month Comparison
@@ -703,6 +874,11 @@ def build_dashboard(
             (r, e) for r, e in enriched
             if _record_month(r) == m_str and (e is None or _is_employee_eligible(e, m_str))
         ]
+        if employee_id:
+            month_records = [
+                (r, e) for r, e in month_records
+                if (e and e.id == employee_id) or (e is None and target_emp and _names_match(target_emp.name, r.rm_name))
+            ]
         if rm_name:
             rm_lower = rm_name.strip().lower()
             month_records = [
@@ -810,9 +986,15 @@ def build_dashboard(
 
     leaderboard = sorted(leaderboard_data, key=lambda x: x.revenue, reverse=True)[:3]
 
-    # 12. Performance Table — all active RMs with records
+    # 12. Performance Table — all active RMs with records and Eligible Revenue > 0
     performance_rows: List[PerformanceTableItem] = []
     for name, rev in rm_revenue.items():
+        # RM Performance filter: display employees only when their Eligible Revenue > 0
+        if rev <= 0:
+            continue
+        # Abhishek and Pratima resigned in October 2026; completely exclude from October onward active reporting
+        if current_month_str >= "2026-10" and name in ["Abhishek", "Pratima"]:
+            continue
         emp = rm_employee.get(name)
         beds = rm_key_count[name]
         
@@ -896,22 +1078,44 @@ def build_dashboard(
     # FIX: Previously hardcoded to only work for September ("-09").
     # Now uses Team/TeamMember DB tables with period-based filtering.
     # All team members appear even with ₹0 revenue (LEFT JOIN logic).
-    team_leader_tracker: List[TeamLeaderIncentiveTrackerItem] = []
+    team_leader_tracker: List[TeamLeaderIncentiveTrackerItem,
+    EmployeeFilterOption] = []
     
     # Fetch active teams from DB for the current performance period
     from app.models.team import Team as TeamModel, TeamMember as TeamMemberModel
     from datetime import date as _date_type
 
     try:
-        # Parse period boundaries from current_month_str (e.g. "2026-10")
-        _y, _m = map(int, current_month_str.split('-'))
-        import calendar
-        period_start = _date_type(_y, _m, 1)
-        _, last_day = calendar.monthrange(_y, _m)
-        period_end = _date_type(_y, _m, last_day)
+        if month:
+            _y, _m = map(int, month.split('-'))
+            import calendar
+            period_start = _date_type(_y, _m, 1)
+            _, last_day = calendar.monthrange(_y, _m)
+            period_end = _date_type(_y, _m, last_day)
+        elif start_date or end_date:
+            period_start = start_date or _date_type(2026, 9, 1)
+            period_end = end_date or date.today()
+        else:
+            _y, _m = map(int, current_month_str.split('-'))
+            import calendar
+            period_start = _date_type(_y, _m, 1)
+            _, last_day = calendar.monthrange(_y, _m)
+            period_end = _date_type(_y, _m, last_day)
     except (ValueError, IndexError):
         period_start = date.today().replace(day=1)
         period_end = date.today()
+
+    def _record_matches_date(r) -> bool:
+        if month and _record_month(r) != month:
+            return False
+        if start_date and r.date < start_date:
+            return False
+        if end_date and r.date > end_date:
+            return False
+        if not month and not start_date and not end_date:
+            if _record_month(r) != current_month_str:
+                return False
+        return True
 
     # Teams active for this month:
     #   active_from <= period_end AND (active_until IS NULL OR active_until >= period_start)
@@ -965,6 +1169,36 @@ def build_dashboard(
             if e and _is_employee_eligible(e, current_month_str):
                 member_emp_ids.add(e.id)
                 team_members_list.append(e)
+
+        # Historical September 2026 team assignment:
+        # Abhishek -> Team Sanjota, Pratima -> Team Kesava (both resigned in October 2026)
+        if current_month_str == "2026-09":
+            if team_obj.id == 2 or team_obj.name == "Team Sanjota" or (leader and _names_match(leader.name, "Sanjota")):
+                e_ab = active_employees_map.get(ABHISHEK_EMP_ID)
+                if e_ab and e_ab not in team_members_list:
+                    member_emp_ids.add(e_ab.id)
+                    team_members_list.append(e_ab)
+            elif team_obj.id == 4 or team_obj.name == "Team Kesava" or (leader and _names_match(leader.name, "Kesava")):
+                e_pr = active_employees_map.get(PRATIMA_EMP_ID)
+                if e_pr and e_pr not in team_members_list:
+                    member_emp_ids.add(e_pr.id)
+                    team_members_list.append(e_pr)
+        elif current_month_str >= "2026-10":
+            # October 2026 onward team additions (in-memory, no DB changes)
+            if team_obj.id == 4 or team_obj.name == "Team Kesava" or (leader and _names_match(leader.name, "Kesava")):
+                kesava_new_names = ["midabalam manasa", "kuncha pavani", "vinod kumar"]
+                for e in active_employees:
+                    if e.name and any(k == e.name.lower().strip() or k in e.name.lower() for k in kesava_new_names):
+                        if e.id not in member_emp_ids:
+                            member_emp_ids.add(e.id)
+                            team_members_list.append(e)
+            elif team_obj.id == 1 or team_obj.name == "Team Arun" or (leader and _names_match(leader.name, "Arun")):
+                arun_new_names = ["raj singh", "dheeraj yadav"]
+                for e in active_employees:
+                    if e.name and any(a == e.name.lower().strip() or a in e.name.lower() for a in arun_new_names):
+                        if e.id not in member_emp_ids:
+                            member_emp_ids.add(e.id)
+                            team_members_list.append(e)
                 
         # Populate emp_team_name_map for RM Performance table
         for e in team_members_list:
@@ -975,17 +1209,39 @@ def build_dashboard(
         
         t_size = len(team_members_list)
         
-        # Calculate team target from monthly targets
+        # Calculate team target from monthly targets (SUM of all team members' targets)
         team_target = sum(current_targets.get(e.id, 0.0) for e in team_members_list)
         
-        # Calculate team revenue/beds from sheet data for this month ONLY
-        team_revenue = 0.0
-        team_beds = 0.0
+        # Calculate team member revenue/beds and team leader revenue/beds
+        team_member_revenue = 0.0
+        team_member_beds = 0.0
+        team_leader_revenue = 0.0
+        team_leader_beds = 0.0
+
         for r, e in enriched:
-            if _record_month(r) == current_month_str:
+            if _record_matches_date(r):
                 if e and e.id in member_emp_ids:
-                    team_revenue += r.revenue
-                    team_beds += r.key_count
+                    team_member_revenue += r.revenue
+                    team_member_beds += r.key_count
+                if (e and e.id == leader.id) or (e is None and _names_match(leader.name, r.rm_name)):
+                    team_leader_revenue += r.revenue
+                    team_leader_beds += r.key_count
+
+        leader_in_members = (leader.id in member_emp_ids) or any(
+            _names_match(leader.name, m.name) for m in team_members_list
+        )
+
+        # Team Base Target = SUM of target of all unique team members including leader
+        if not leader_in_members and leader:
+            team_target += current_targets.get(leader.id, 0.0)
+
+        # Overall Team Revenue = Team Members Revenue + Team Leader Revenue (never double counted)
+        if leader_in_members:
+            team_revenue = team_member_revenue
+            team_beds = team_member_beds
+        else:
+            team_revenue = team_member_revenue + team_leader_revenue
+            team_beds = team_member_beds + team_leader_beds
         
         # Incentive slabs — dynamic based on month
         if current_month_str == '2026-10':
@@ -1064,7 +1320,6 @@ def build_dashboard(
                 revenue_remaining = next_slab_target - team_revenue
                 incentive_amount = 0.0
                 potential_incentive = base_incentive
-            potential_incentive = base_incentive
         
         # Compile team members list — LEFT JOIN: show ALL members even with ₹0
         team_member_stats = []
@@ -1073,16 +1328,11 @@ def build_dashboard(
             m_beds = 0.0
             m_name_norm = _normalize_name(m_emp.name)
             
-            # Match member revenue from sheet data
-            for sheet_rm_name, rev_val in rm_revenue.items():
-                if _names_match(m_name_norm, sheet_rm_name):
-                    # Only use revenue from the selected month
-                    m_rev += rm_monthly_revenue.get((sheet_rm_name, current_month_str), 0.0)
-                    # Beds from the same month
-                    for r, e in enriched:
-                        if _record_month(r) == current_month_str and e and e.id == m_emp.id:
-                            m_beds += r.key_count
-                    break  # Found match, stop searching
+            for r, e in enriched:
+                if _record_matches_date(r):
+                    if (e and e.id == m_emp.id) or (e is None and _names_match(m_name_norm, r.rm_name)):
+                        m_rev += r.revenue
+                        m_beds += r.key_count
             
             m_tgt = _target_for_emp(m_emp, current_targets, current_month_str)
             m_ach = calculate_achievement_pct(m_rev, m_tgt)
@@ -1115,7 +1365,13 @@ def build_dashboard(
             incentive=incentive_amount,
             team_members=team_member_stats,
             beds_sold=team_beds,
-            progress_percentage=progress_percentage
+            progress_percentage=progress_percentage,
+            team_leader_revenue=team_leader_revenue,
+            team_member_revenue=team_member_revenue,
+            team_leader_beds=team_leader_beds,
+            team_member_beds=team_member_beds,
+            leader_in_members=leader_in_members,
+            overall_team_revenue=team_revenue,
         ))
             
     team_leader_tracker.sort(key=lambda x: x.team_revenue, reverse=True)
@@ -1130,7 +1386,11 @@ def build_dashboard(
     team_performance_chart = [
         TeamPerformanceChartItem(
             team_name=t.team_name,
-            revenue=t.team_revenue
+            revenue=t.team_revenue,
+            beds=t.team_beds,
+            team_leader_revenue=t.team_leader_revenue,
+            team_member_revenue=t.team_member_revenue,
+            overall_team_revenue=t.team_revenue,
         ) for t in team_leader_tracker
     ]
 
@@ -1145,6 +1405,7 @@ def build_dashboard(
         team_leader_tracker=team_leader_tracker,
         team_performance=team_performance_chart,
         available_months=available_months,
-        available_rms=all_rms,
+        available_rms=available_employee_options,
+        available_employees=available_employee_options,
     )
 
