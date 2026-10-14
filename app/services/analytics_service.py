@@ -432,20 +432,21 @@ def is_eligible_dropdown_designation(designation: Optional[str]) -> bool:
     """
     if not designation:
         return False
-    norm = re.sub(r"\s+", " ", designation.replace(".", "").strip().lower())
+    norm = re.sub(r"[.\-_]", " ", designation.lower())
+    norm = re.sub(r"&", " and ", norm)
+    norm = re.sub(r"\b(mgr|mngr)\b", "manager", norm)
+    norm = re.sub(r"\b(sr)\b", "senior", norm)
+    norm = re.sub(r"\b(ops|oper)\b", "operations", norm)
+    norm = re.sub(r"\br\s+m\b", "rm", norm)
+    norm = re.sub(r"\s+", " ", norm).strip()
+
     if norm == "founder":
         return True
-    if norm in ("senior relationship manager", "sr relationship manager", "senior rm", "sr rm"):
+    if norm in ("senior relationship manager", "senior rm"):
         return True
-    if norm in ("rm", "r m", "relationship manager"):
+    if norm in ("rm", "relationship manager"):
         return True
-    if norm in (
-        "city sales & ops manager",
-        "city sales and ops manager",
-        "city sales & operations manager",
-        "city sales and operations manager",
-        "city sales & ops mgr",
-    ):
+    if norm in ("city sales and operations manager", "city sales operations manager"):
         return True
     if norm == "city manager":
         return True
@@ -470,7 +471,13 @@ def build_dashboard(
 
     # 2. Fetch all active employees from DB
     db_active_employees: List[Employee] = (
-        db.query(Employee).filter(Employee.status.ilike("ACTIVE")).all()
+        db.query(Employee)
+        .filter(
+            Employee.status.isnot(None),
+            Employee.status.ilike("ACTIVE"),
+            ~Employee.status.in_(["RESIGNED", "INACTIVE", "DELETED", "TERMINATED", "resigned", "inactive", "deleted", "terminated"])
+        )
+        .all()
     )
     
     # Apply historical-period rule: Ankit and Pavan joined in October 2026.
