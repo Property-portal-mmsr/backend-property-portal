@@ -941,9 +941,13 @@ def build_dashboard(
 
     latest_month_in_filter = max(unique_months_in_filtered) if unique_months_in_filtered else current_month_str
 
-    # 11. Leaderboard — top 3 RMs by revenue from filtered data
+    # 11. Leaderboard — top 3 RMs by achievement percentage from filtered data
     leaderboard_data: List[LeaderboardItem] = []
     for name, rev in rm_revenue.items():
+        if rev <= 0:
+            continue
+        if current_month_str >= "2026-10" and name in ["Abhishek", "Pratima"]:
+            continue
         emp = rm_employee.get(name)
         beds = rm_key_count[name]
         
@@ -991,7 +995,17 @@ def build_dashboard(
             )
         )
 
-    leaderboard = sorted(leaderboard_data, key=lambda x: x.revenue, reverse=True)[:3]
+    sorted_leaderboard = sorted(leaderboard_data, key=lambda x: (x.achievement_pct, x.revenue), reverse=True)
+    leaderboard: List[LeaderboardItem] = []
+    current_rank = 0
+    prev_ach = None
+    for item in sorted_leaderboard:
+        if prev_ach is None or item.achievement_pct != prev_ach:
+            current_rank += 1
+            prev_ach = item.achievement_pct
+        if current_rank > 3:
+            break
+        leaderboard.append(item)
 
     # 12. Performance Table — all active RMs with records and Eligible Revenue > 0
     performance_rows: List[PerformanceTableItem] = []
