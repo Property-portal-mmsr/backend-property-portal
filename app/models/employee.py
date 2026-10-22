@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float
+from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 
@@ -21,6 +21,7 @@ class Employee(Base):
     profile_image = Column(String(255), nullable=True)
     status = Column(String(20), default="ACTIVE")
     must_change_password = Column(Boolean, default=False, nullable=True)
+    last_login_at = Column(DateTime, nullable=True)
     monthly_target = Column(Float, nullable=True, default=0.0)
     is_team_leader = Column(Boolean, default=False, nullable=True)
 

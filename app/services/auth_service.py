@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, status
+from datetime import datetime
 import random
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.password_reset_repository import PasswordResetRepository
@@ -53,6 +54,21 @@ class AuthService:
             "email": employee.email or "",
             "role": role_str,
         }
+        employee.last_login_at = datetime.utcnow()
+        db.commit()
+
+        try:
+            AuditService.log_action(
+                db=db,
+                employee_id=emp_id_str,
+                employee_name=emp_name_str,
+                action="Logged In",
+                entity="Employee",
+                entity_id=emp_id_str,
+            )
+        except Exception:
+            pass
+
         access_token = create_access_token(data=payload)
         refresh_token = create_refresh_token(data=payload)
 

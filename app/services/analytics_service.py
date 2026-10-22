@@ -256,13 +256,27 @@ def _build_rm_map(employees: List[Employee]) -> Dict[str, Employee]:
 def _resolve_rm(sheet_rm: str, rm_map: Dict[str, Employee]) -> Optional[Employee]:
     """
     Given a sheet RM name, find the matching active Employee using fuzzy match.
-    Returns None if no match found.
+    When several employees match, prefer the closest name so "Vinod Kumar"
+    does not attach to the shorter employee "Vinod".
     """
     sn = _normalize_name(sheet_rm)
+    best_emp = None
+    best_rank = None
     for db_name_norm, emp in rm_map.items():
-        if _names_match(sn, db_name_norm):
-            return emp
-    return None
+        if not _names_match(sn, db_name_norm):
+            continue
+        if sn == db_name_norm:
+            rank = (3, len(db_name_norm))
+        elif db_name_norm in sn:
+            rank = (2, len(db_name_norm))
+        elif sn in db_name_norm:
+            rank = (1, -abs(len(db_name_norm) - len(sn)))
+        else:
+            rank = (0, -abs(len(db_name_norm) - len(sn)))
+        if best_rank is None or rank > best_rank:
+            best_rank = rank
+            best_emp = emp
+    return best_emp
 
 
 ABHISHEK_EMP_ID = 981
@@ -834,13 +848,13 @@ def build_dashboard(
         elif m_str >= "2026-10":
             # October 2026 onward team additions (in-memory, no DB changes)
             if team_obj.id == 4 or team_obj.name == "Team Kesava" or (rm_emp and _names_match(rm_emp.name, "Kesava")):
-                kesava_new_names = ["midabalam manasa", "kuncha pavani", "vinod kumar"]
+                kesava_new_names = ["midabalam manasa", "vinod kumar"]
                 for e in active_employees:
                     if e.name and any(k == e.name.lower().strip() or k in e.name.lower() for k in kesava_new_names):
                         if e not in team_members:
                             team_members.append(e)
             elif team_obj.id == 1 or team_obj.name == "Team Arun" or (rm_emp and _names_match(rm_emp.name, "Arun")):
-                arun_new_names = ["raj singh", "dheeraj yadav"]
+                arun_new_names = ["raj singh", "dheeraj yadav", "kuncha pavani"]
                 for e in active_employees:
                     if e.name and any(a == e.name.lower().strip() or a in e.name.lower() for a in arun_new_names):
                         if e not in team_members:
@@ -1193,14 +1207,14 @@ def build_dashboard(
         elif current_month_str >= "2026-10":
             # October 2026 onward team additions (in-memory, no DB changes)
             if team_obj.id == 4 or team_obj.name == "Team Kesava" or (leader and _names_match(leader.name, "Kesava")):
-                kesava_new_names = ["midabalam manasa", "kuncha pavani", "vinod kumar"]
+                kesava_new_names = ["midabalam manasa", "vinod kumar"]
                 for e in active_employees:
                     if e.name and any(k == e.name.lower().strip() or k in e.name.lower() for k in kesava_new_names):
                         if e.id not in member_emp_ids:
                             member_emp_ids.add(e.id)
                             team_members_list.append(e)
             elif team_obj.id == 1 or team_obj.name == "Team Arun" or (leader and _names_match(leader.name, "Arun")):
-                arun_new_names = ["raj singh", "dheeraj yadav"]
+                arun_new_names = ["raj singh", "dheeraj yadav", "kuncha pavani"]
                 for e in active_employees:
                     if e.name and any(a == e.name.lower().strip() or a in e.name.lower() for a in arun_new_names):
                         if e.id not in member_emp_ids:

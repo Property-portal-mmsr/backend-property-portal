@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
 
 
 class EmployeeCreate(BaseModel):
@@ -43,6 +43,7 @@ class EmployeeResponse(BaseModel):
     reporting_manager: Optional[str] = ""
     joining_date: Optional[str] = ""
     profile_image: Optional[str] = ""
+    last_login_at: Optional[str] = None
 
     @classmethod
     def from_db(cls, emp) -> "EmployeeResponse":
@@ -74,7 +75,32 @@ class EmployeeResponse(BaseModel):
             reporting_manager=getattr(emp, "reporting_manager", "") or "",
             joining_date=getattr(emp, "joining_date", "") or "",
             profile_image=getattr(emp, "profile_image", "") or "",
+            last_login_at=_format_login_at(getattr(emp, "last_login_at", None)),
         )
+
+
+def _format_login_at(value) -> Optional[str]:
+    if not value:
+        return None
+    return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class LoginReportRow(BaseModel):
+    id: str
+    name: str
+    department: str
+    last_login_at: Optional[str] = None
+    login_count: int
+    used: bool
+    never_logged_in: bool
+
+
+class LoginReportResponse(BaseModel):
+    month: str
+    used: int
+    unused: int
+    never_logged_in: int
+    employees: List[LoginReportRow]
 
 
 

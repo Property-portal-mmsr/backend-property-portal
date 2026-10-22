@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.database.database import get_db
-from app.schemas.employee import EmployeeCreate, EmployeeUpdate, EmployeeResponse
+from app.schemas.employee import (
+    EmployeeCreate,
+    EmployeeUpdate,
+    EmployeeResponse,
+    LoginReportResponse,
+)
 from app.schemas.auth import PasswordResetRequest, StatusUpdateRequest
 from app.services.employee_service import EmployeeService
 from app.services.audit_service import AuditService
@@ -18,6 +23,15 @@ def get_employees(
     current_user: Employee = Depends(get_current_user)
 ):
     return EmployeeService.get_all_employees(db)
+
+
+@router.get("/login-report", response_model=LoginReportResponse)
+def get_login_report(
+    month: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_admin_user),
+):
+    return EmployeeService.get_login_report(db, month)
 
 
 @router.get("/{emp_id}", response_model=EmployeeResponse)

@@ -18,15 +18,16 @@ def validate_all():
     oct_kesava = next(t for t in dash_oct.team_leader_tracker if "Kesava" in t.team_leader_name)
     oct_kesava_member_names = [m.name.lower() for m in oct_kesava.team_members]
     assert any("manasa" in n for n in oct_kesava_member_names), "Manasa missing in Kesava Oct team"
-    assert any("pavani" in n for n in oct_kesava_member_names), "Pavani missing in Kesava Oct team"
+    assert not any("pavani" in n for n in oct_kesava_member_names), "Pavani incorrectly in Kesava Oct team"
     assert any("vinod" in n for n in oct_kesava_member_names), "Vinod missing in Kesava Oct team"
-    print("[PASS] Kesava team has Manasa, Pavani, Vinod Kumar in October 2026")
+    print("[PASS] Kesava team has Manasa, Vinod Kumar in October 2026")
 
     oct_arun = next(t for t in dash_oct.team_leader_tracker if "Arun" in t.team_leader_name)
     oct_arun_member_names = [m.name.lower() for m in oct_arun.team_members]
     assert any("raj singh" in n for n in oct_arun_member_names), "Raj Singh missing in Arun Oct team"
     assert any("dheeraj" in n for n in oct_arun_member_names), "Dheeraj missing in Arun Oct team"
-    print("[PASS] Arun team has Raj Singh, Dheeraj Yadav in October 2026")
+    assert any("pavani" in n for n in oct_arun_member_names), "Pavani missing in Arun Oct team"
+    print("[PASS] Arun team has Raj Singh, Dheeraj Yadav, Kuncha Pavani in October 2026")
 
     print("\nTesting September 2026 (Historical)...")
     dash_sep = build_dashboard(db, month="2026-09")
@@ -42,6 +43,7 @@ def validate_all():
         sep_arun_member_names = [m.name.lower() for m in sep_arun.team_members]
         assert not any("raj singh" in n for n in sep_arun_member_names), "Raj Singh incorrectly in Arun Sep team"
         assert not any("dheeraj" in n for n in sep_arun_member_names), "Dheeraj incorrectly in Arun Sep team"
+        assert not any("pavani" in n for n in sep_arun_member_names), "Pavani incorrectly in Arun Sep team"
     print("[PASS] Historical September team structure unchanged for Arun")
 
     # Abhishek in Sanjota, Pratima in Kesava in Sep
