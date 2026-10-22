@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Depends, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Depends, HTTPException, Request, status
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+import httpx
 import os
 import logging
 
@@ -53,9 +53,37 @@ app.add_middleware(
 # Include v1 API router
 app.include_router(api_router)
 
-# Mount uploads directory
+# Serve uploaded images from disk. Local dev uses the production database, so
+# files that were uploaded on the API host are fetched from there when missing.
 os.makedirs("uploads/images", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+UPLOADS_ROOT = os.path.abspath("uploads")
+UPLOADS_FALLBACK_ORIGIN = os.getenv("UPLOADS_FALLBACK_ORIGIN", "").strip().rstrip("/")
+
+
+@app.get("/uploads/{file_path:path}")
+async def serve_upload(file_path: str):
+    local_path = os.path.abspath(os.path.join(UPLOADS_ROOT, file_path))
+    if local_path != UPLOADS_ROOT and not local_path.startswith(UPLOADS_ROOT + os.sep):
+        raise HTTPException(status_code=404, detail="Not Found")
+    if os.path.isfile(local_path):
+        return FileResponse(local_path)
+
+    if UPLOADS_FALLBACK_ORIGIN:
+        remote_url = f"{UPLOADS_FALLBACK_ORIGIN}/uploads/{file_path}"
+        try:
+            async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+                upstream = await client.get(remote_url)
+            content_type = upstream.headers.get("content-type", "")
+            if upstream.status_code == 200 and content_type.startswith("image/"):
+                return Response(
+                    content=upstream.content,
+                    media_type=content_type.split(";")[0],
+                    headers={"Cache-Control": "public, max-age=86400"},
+                )
+        except httpx.HTTPError:
+            logger.warning("Upload fallback failed for %s", file_path)
+
+    raise HTTPException(status_code=404, detail="Not Found")
 
 
 @app.exception_handler(Exception)
