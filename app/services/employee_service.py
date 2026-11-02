@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 import re
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import HTTPException, status
 from app.models.employee import Employee
 from app.models.audit_log import AuditLog
@@ -17,7 +17,10 @@ from app.schemas.employee import (
 from app.repositories.employee_repository import EmployeeRepository
 from app.utils.password import hash_password
 
-IST = ZoneInfo("Asia/Kolkata")
+try:
+    IST = ZoneInfo("Asia/Kolkata")
+except ZoneInfoNotFoundError:
+    IST = timezone(timedelta(hours=5, minutes=30), name="IST")
 
 
 class EmployeeService:
