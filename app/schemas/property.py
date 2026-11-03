@@ -127,25 +127,46 @@ class PropertyResponse(BaseModel):
 
     @classmethod
     def from_db(cls, prop) -> "PropertyResponse":
-        # Extract images from relationship first, then JSON column
-        extracted_images = []
-        if getattr(prop, 'property_images', None):
-            extracted_images = [
-                img.image_url for img in prop.property_images 
-                if getattr(img, 'image_url', None) and not getattr(img, 'is_deleted', False)
-            ]
+        from app.utils.storage import normalize_image_url
 
-        if not extracted_images and prop.images:
+        extracted_images = []
+        seen = set()
+
+        def add_url(raw):
+            url = normalize_image_url(raw if isinstance(raw, str) else (str(raw) if raw else None))
+            if url and url not in seen:
+                seen.add(url)
+                extracted_images.append(url)
+
+        raw_urls = []
+        if getattr(prop, "property_images", None):
+            for img in prop.property_images:
+                if getattr(img, "image_url", None) and not getattr(img, "is_deleted", False):
+                    raw_urls.append(img.image_url)
+
+        json_urls = []
+        if prop.images:
             if isinstance(prop.images, list):
-                extracted_images = [str(url) for url in prop.images if url]
+                json_urls.extend(prop.images)
             elif isinstance(prop.images, str) and prop.images.strip():
                 try:
                     import json
                     parsed = json.loads(prop.images)
                     if isinstance(parsed, list):
-                        extracted_images = [str(url) for url in parsed if url]
+                        json_urls.extend(parsed)
+                    else:
+                        json_urls.append(prop.images.strip())
                 except Exception:
-                    extracted_images = [prop.images.strip()]
+                    json_urls.append(prop.images.strip())
+
+        combined = raw_urls + json_urls
+        https_first = [
+            u for u in combined
+            if isinstance(u, str) and u.strip().startswith(("http://", "https://"))
+        ]
+        rest = [u for u in combined if u not in https_first]
+        for url in https_first + rest:
+            add_url(url)
 
         return cls(
             id=prop.id,

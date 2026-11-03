@@ -38,3 +38,14 @@ GOOGLE_SHEET_URL = os.getenv(
     ""
 )
 
+# Shared photo storage. Old listings already live on this CloudFront distribution.
+# New uploads must go here too — local disk is per-server and is wiped by deploys.
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
+AWS_REGION = os.getenv("AWS_REGION", "ap-south-1").strip() or "ap-south-1"
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "makemystayrealty").strip()
+CLOUDFRONT_DOMAIN = os.getenv("CLOUDFRONT_DOMAIN", "d1yfdszs9lcm9e.cloudfront.net").strip()
+PUBLIC_UPLOADS_BASE_URL = os.getenv("PUBLIC_UPLOADS_BASE_URL", "").strip().rstrip("/")
+UPLOADS_FALLBACK_ORIGIN = os.getenv("UPLOADS_FALLBACK_ORIGIN", "").strip().rstrip("/")
+UPLOADS_DIR = os.path.abspath(os.getenv("UPLOADS_DIR", "uploads"))
+

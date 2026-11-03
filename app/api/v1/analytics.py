@@ -39,28 +39,28 @@ def get_dashboard(
         None,
         description="Filter by month in YYYY-MM format (e.g. 2026-04). "
                     "Also drives the daily-revenue chart and prev/current month comparison.",
-        example="2026-04",
+        examples=["2026-04"],
         pattern=r"^\d{4}-\d{2}$",
     ),
     employee_id: Optional[int] = Query(
         None,
         description="Filter by Employee database ID.",
-        example=6,
+        examples=[6],
     ),
     rm_name: Optional[str] = Query(
         None,
         description="Filter by RM name (case-insensitive partial match).",
-        example="Chethan",
+        examples=["Chethan"],
     ),
     start_date: Optional[date] = Query(
         None,
         description="Filter records on or after this date (YYYY-MM-DD).",
-        example="2026-04-01",
+        examples=["2026-04-01"],
     ),
     end_date: Optional[date] = Query(
         None,
         description="Filter records on or before this date (YYYY-MM-DD).",
-        example="2026-04-30",
+        examples=["2026-04-30"],
     ),
     db: Session = Depends(get_db),
     current_user: Employee = Depends(get_current_user),

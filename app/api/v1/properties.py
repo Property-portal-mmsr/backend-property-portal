@@ -1,9 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
-import shutil
-import os
-import uuid
 import logging
 
 logger = logging.getLogger(__name__)
@@ -155,15 +152,16 @@ def upload_property_image(
     file: UploadFile = File(...),
     current_user: Employee = Depends(get_current_admin_user)
 ):
+    from app.utils.storage import store_image_bytes
+
     try:
-        os.makedirs("uploads/images", exist_ok=True)
-        ext = os.path.splitext(file.filename)[1]
-        unique_filename = f"{uuid.uuid4().hex}{ext}"
-        file_path = f"uploads/images/{unique_filename}"
-        
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        return {"url": f"/{file_path}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        contents = file.file.read()
+        url = store_image_bytes(contents, filename=file.filename or "", content_type=file.content_type)
+        return {"url": url}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception:
+        logger.exception("Property image upload failed")
+        raise HTTPException(status_code=500, detail="Failed to upload image")

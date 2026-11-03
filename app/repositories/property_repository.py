@@ -319,7 +319,20 @@ class PropertyRepository:
             db.commit()
             db.refresh(new_prop)
 
-        return new_prop
+        if prop_data.images:
+            PropertyRepository._replace_property_images(db, new_prop.id, prop_data.images)
+            db.commit()
+
+        return (
+            db.query(Property)
+            .options(
+                selectinload(Property.property_pricing),
+                selectinload(Property.property_images),
+                selectinload(Property.property_amenities),
+            )
+            .filter(Property.id == new_prop.id)
+            .first()
+        )
 
     @staticmethod
     def update(db: Session, db_prop: Property, update_data: PropertyUpdate) -> Property:
@@ -413,24 +426,9 @@ class PropertyRepository:
         # This is necessary because PropertyResponse.from_db() prioritises the
         # relationship table over the images JSON column.
         if "images" in update_dict:
-            final_image_urls: List[str] = update_dict["images"] or []
-
-            # Delete all current PropertyImage rows for this property
-            db.query(PropertyImage).filter(
-                PropertyImage.property_id == db_prop.id
-            ).delete(synchronize_session=False)
-
-            # Insert fresh rows in the submitted order
-            for sort_order, url in enumerate(final_image_urls):
-                if url:  # skip blank/None entries
-                    db.add(PropertyImage(
-                        property_id=db_prop.id,
-                        image_url=url,
-                        is_primary=(sort_order == 0),
-                        sort_order=sort_order,
-                        is_deleted=False,
-                    ))
-
+            PropertyRepository._replace_property_images(
+                db, db_prop.id, update_dict["images"] or []
+            )
             db.commit()
 
         # Re-fetch with eager loading so pricing/amenities/images are all fresh
@@ -444,6 +442,33 @@ class PropertyRepository:
             .filter(Property.id == db_prop.id)
             .first()
         )
+
+    @staticmethod
+    def _replace_property_images(db: Session, property_id: int, image_urls: List[str]) -> None:
+        from app.utils.storage import canonical_image_url_for_storage
+
+        db.query(PropertyImage).filter(
+            PropertyImage.property_id == property_id
+        ).delete(synchronize_session=False)
+        canonical_urls: List[str] = []
+        for sort_order, url in enumerate(image_urls or []):
+            if not url:
+                continue
+            stored = canonical_image_url_for_storage(url)
+            if not stored:
+                continue
+            canonical_urls.append(stored)
+            db.add(PropertyImage(
+                property_id=property_id,
+                image_url=stored,
+                is_primary=(sort_order == 0),
+                sort_order=sort_order,
+                is_deleted=False,
+            ))
+
+        prop = db.query(Property).filter(Property.id == property_id).first()
+        if prop is not None:
+            prop.images = canonical_urls
 
     @staticmethod
     def delete(db: Session, db_prop: Property) -> None:

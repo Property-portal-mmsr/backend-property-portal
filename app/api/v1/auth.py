@@ -1,10 +1,9 @@
-from typing import List
-from fastapi import APIRouter, Depends, status
+from typing import List, Tuple
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.schemas.auth import (
-    LoginRequest,
     TokenResponse,
     RefreshTokenRequest,
     ChangePasswordRequest,
@@ -20,15 +19,37 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 
-@router.post("/login", response_model=TokenResponse)
+async def credentials_from_request(request: Request) -> Tuple[str, str]:
+    """Accept JSON `{email,password}` and OAuth2 form `{username,password}`."""
+    content_type = (request.headers.get("content-type") or "").lower()
+    email = password = None
+    if "application/json" in content_type:
+        try:
+            data = await request.json()
+        except Exception:
+            data = None
+        if isinstance(data, dict):
+            email = data.get("email") or data.get("username")
+            password = data.get("password")
+    else:
+        form = await request.form()
+        email = form.get("email") or form.get("username")
+        password = form.get("password")
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Email and password are required",
+        )
+    return str(email), str(password)
 
-def login_json(
-    credentials: LoginRequest,
+
+@router.post("/login", response_model=TokenResponse)
+async def login_json(
+    request: Request,
     db: Session = Depends(get_db),
 ):
-    return AuthService.authenticate_employee(
-        db=db, email=credentials.email, password=credentials.password
-    )
+    email, password = await credentials_from_request(request)
+    return AuthService.authenticate_employee(db=db, email=email, password=password)
 
 
 

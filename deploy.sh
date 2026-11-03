@@ -40,7 +40,10 @@ for SERVER in "${ALL_SERVERS[@]}"; do
       --exclude '.git' \
       --exclude '*.pyc' \
       --exclude '.env' \
+      --exclude '.env.*' \
       --exclude '*.db' \
+      --exclude 'uploads' \
+      --exclude 'uploads/**' \
       -e "ssh $SSH_OPTS" ./ "$EC2_USER@$SERVER:$WEB_BASE_DIR/"; then
       echo "❌ Error: rsync failed for $SERVER."
       FAILED_SERVERS+=("$SERVER")
