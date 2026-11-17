@@ -1,0 +1,1673 @@
+{
+  "timestamp": "2026-11-17T11:45:13.258517",
+  "employees": [
+    {
+      "id": 1,
+      "emp_id": "MMSR00",
+      "name": "System Admin",
+      "email": "admin@makemystay.ai",
+      "phone": "9840000000",
+      "password": "Welcome@123",
+      "password_hash": "$2b$12$doCYfxZMSYPOXxSKWsyHae9lznQ04y1HyqF296jQELe08Wvau4prK",
+      "role": "ADMIN",
+      "designation": "System Administrator",
+      "department": "Management",
+      "reporting_manager": "None",
+      "joining_date": "2023-01-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T11:24:01",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 2,
+      "emp_id": "MMSR01",
+      "name": "Madhava R",
+      "email": "madhava@makemystay.ai",
+      "phone": "9840000001",
+      "password": "Welcome@123",
+      "password_hash": "$2b$12$nLyBrrOo6V0hSoWlpRt9kevRsQ76jtOLBkg78mpbLUzMZaKSP4FvS",
+      "role": "ADMIN",
+      "designation": "Founder",
+      "department": "Management",
+      "reporting_manager": "None",
+      "joining_date": "2023-01-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T10:06:59",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 3,
+      "emp_id": "MMSR02",
+      "name": "Arun N",
+      "email": "arun@makemystay.ai",
+      "phone": "9840000002",
+      "password": "$2b$12$2mJ0oiFa4ZFCGWseY1oCpe47FBXqHu/OwKInndayVYiSQKDwJikQy",
+      "password_hash": "$2b$12$2mJ0oiFa4ZFCGWseY1oCpe47FBXqHu/OwKInndayVYiSQKDwJikQy",
+      "role": "EMPLOYEE",
+      "designation": "City Manager",
+      "department": "Operations",
+      "reporting_manager": "Madhava R",
+      "joining_date": "2023-06-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T07:54:30",
+      "monthly_target": 0.0,
+      "is_team_leader": true
+    },
+    {
+      "id": 4,
+      "emp_id": "MMSR03",
+      "name": "Kiran M R",
+      "email": "kiran@makemystay.ai",
+      "phone": "9840000003",
+      "password": "$2b$12$FhRq5YjvUqXD4jqm3SFWV.POeNazdT0lN1hhB4.MjsqAe8ISNLtym",
+      "password_hash": "$2b$12$FhRq5YjvUqXD4jqm3SFWV.POeNazdT0lN1hhB4.MjsqAe8ISNLtym",
+      "role": "EMPLOYEE",
+      "designation": "Business Development Manager",
+      "department": "Sales",
+      "reporting_manager": "Madhava R",
+      "joining_date": "2023-06-15",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": true,
+      "last_login_at": null,
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 5,
+      "emp_id": "MMSR04",
+      "name": "Sanjota",
+      "email": "sanjota@makemystay.ai",
+      "phone": "9840000004",
+      "password": "$2b$12$GBHMLSnfFaalpxpuQ9F7BuzyNeweNujuNezhCyBTP4KFPjsZOjLqm",
+      "password_hash": "$2b$12$GBHMLSnfFaalpxpuQ9F7BuzyNeweNujuNezhCyBTP4KFPjsZOjLqm",
+      "role": "EMPLOYEE",
+      "designation": "City Manager",
+      "department": "Operations",
+      "reporting_manager": "Madhava R",
+      "joining_date": "2023-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": true,
+      "last_login_at": "2026-10-30T06:34:35",
+      "monthly_target": 0.0,
+      "is_team_leader": true
+    },
+    {
+      "id": 6,
+      "emp_id": "MMSR07",
+      "name": "Chethan P",
+      "email": "chethan@makemystay.ai",
+      "phone": "9840000007",
+      "password": "$2b$12$BL54.YHPW5BEuJb1Jw3N4eZ9Kg.q61NjoHu4DrpLoi2LwMRG22Fh6",
+      "password_hash": "$2b$12$BL54.YHPW5BEuJb1Jw3N4eZ9Kg.q61NjoHu4DrpLoi2LwMRG22Fh6",
+      "role": "EMPLOYEE",
+      "designation": "Senior Relationship Manager",
+      "department": "Sales",
+      "reporting_manager": "Sanjota",
+      "joining_date": "2023-08-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T09:58:48",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 7,
+      "emp_id": "MMSR08",
+      "name": "Goutham N",
+      "email": "goutham@makemystay.ai",
+      "phone": "9840000008",
+      "password": "$2b$12$598lGdS.Ch5rhrmG6YRtmeovNzX//JFnxvO5NCP1RoMDJ4PND5f7i",
+      "password_hash": "$2b$12$598lGdS.Ch5rhrmG6YRtmeovNzX//JFnxvO5NCP1RoMDJ4PND5f7i",
+      "role": "EMPLOYEE",
+      "designation": "City Sales & Ops Manager",
+      "department": "Operations",
+      "reporting_manager": "Arun N",
+      "joining_date": "2023-08-15",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-15T05:10:00",
+      "monthly_target": 0.0,
+      "is_team_leader": true
+    },
+    {
+      "id": 8,
+      "emp_id": "MMSR09",
+      "name": "Pritish Kumar Jena",
+      "email": "pritish@makemystay.ai",
+      "phone": "9840000009",
+      "password": "$2b$12$/8q9CStlExlDGOjfpimtj.NmEEyzsWGrrL2jg1SK5nRs.DuLuJDPq",
+      "password_hash": "$2b$12$/8q9CStlExlDGOjfpimtj.NmEEyzsWGrrL2jg1SK5nRs.DuLuJDPq",
+      "role": "EMPLOYEE",
+      "designation": "Senior Relationship Manager",
+      "department": "Sales",
+      "reporting_manager": "Sanjota",
+      "joining_date": "2023-09-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-13T05:33:51",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 9,
+      "emp_id": "MMSR10",
+      "name": "Jeron Roy Jacob S",
+      "email": "jeron@makemystay.ai",
+      "phone": "9840000010",
+      "password": "$2b$12$R4oPjU5/kDmLx.QAYxS4ruqtNSP/EiPGOhbZXVEpNqyGDrffn1.9m",
+      "password_hash": "$2b$12$R4oPjU5/kDmLx.QAYxS4ruqtNSP/EiPGOhbZXVEpNqyGDrffn1.9m",
+      "role": "EMPLOYEE",
+      "designation": "Full Stack Developer",
+      "department": "Technology",
+      "reporting_manager": "Madhava R",
+      "joining_date": "2023-10-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:52:02",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 10,
+      "emp_id": "MMSR11",
+      "name": "Maheswaran M",
+      "email": "maheswaran@makemystay.ai",
+      "phone": "9840000011",
+      "password": "$2b$12$ZLtVEPEh3aXi5rhmOQNj0uTZtpRo5wLFe6zjGV3m90TnlrNpAp7gu",
+      "password_hash": "$2b$12$ZLtVEPEh3aXi5rhmOQNj0uTZtpRo5wLFe6zjGV3m90TnlrNpAp7gu",
+      "role": "ADMIN",
+      "designation": "Full Stack Developer",
+      "department": "Technology",
+      "reporting_manager": "Madhava R",
+      "joining_date": "2023-10-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": null,
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 11,
+      "emp_id": "MMSR12",
+      "name": "Harshini B",
+      "email": "harshini@makemystay.ai",
+      "phone": "9840000012",
+      "password": "$2b$12$FjPB7DjvY7tzcBwP1aM7BOj7s3Od5ZK4AFIuyTamZDWnUUAY/9vVG",
+      "password_hash": "$2b$12$FjPB7DjvY7tzcBwP1aM7BOj7s3Od5ZK4AFIuyTamZDWnUUAY/9vVG",
+      "role": "EMPLOYEE",
+      "designation": "Tech Developer",
+      "department": "Technology",
+      "reporting_manager": "Maheswaran M",
+      "joining_date": "2023-11-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T10:38:06",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 12,
+      "emp_id": "MMSR13",
+      "name": "Prashanthi",
+      "email": "prashanthi@makemystay.ai",
+      "phone": "9840000013",
+      "password": "$2b$12$FhRq5YjvUqXD4jqm3SFWV.POeNazdT0lN1hhB4.MjsqAe8ISNLtym",
+      "password_hash": "$2b$12$FhRq5YjvUqXD4jqm3SFWV.POeNazdT0lN1hhB4.MjsqAe8ISNLtym",
+      "role": "EMPLOYEE",
+      "designation": "Marketing",
+      "department": "Marketing",
+      "reporting_manager": "Madhava R",
+      "joining_date": "2023-11-15",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": true,
+      "last_login_at": null,
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 14,
+      "emp_id": "MMSR15",
+      "name": "Kalyan Kumar Reddy",
+      "email": "kalayankumar.reddy@makemystay.ai",
+      "phone": "9840000015",
+      "password": "$2b$12$4LRjm9YIBkbkJubj3kBTleWmlYulbv3mKgkQNzbS5AEaSfVyrDWcG",
+      "password_hash": "$2b$12$4LRjm9YIBkbkJubj3kBTleWmlYulbv3mKgkQNzbS5AEaSfVyrDWcG",
+      "role": "EMPLOYEE",
+      "designation": "Senior Relationship Manager",
+      "department": "Sales",
+      "reporting_manager": "Kesava",
+      "joining_date": "2023-12-15",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-16T13:37:03",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 17,
+      "emp_id": "MMSR18",
+      "name": "Kesava",
+      "email": "chenna.kesavulu@makemystay.ai",
+      "phone": "9840000018",
+      "password": "$2b$12$QQvAvSMsrZrfHsOU4v.uNOzqUcsWHwDj4lvtiKSSKphpmu18QI0tW",
+      "password_hash": "$2b$12$QQvAvSMsrZrfHsOU4v.uNOzqUcsWHwDj4lvtiKSSKphpmu18QI0tW",
+      "role": "EMPLOYEE",
+      "designation": "City Sales & Ops Manager",
+      "department": "Operations",
+      "reporting_manager": "Arun N",
+      "joining_date": "2024-02-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-13T06:26:02",
+      "monthly_target": 0.0,
+      "is_team_leader": true
+    },
+    {
+      "id": 19,
+      "emp_id": "MMSR20",
+      "name": "Vinod",
+      "email": "vinod@makemystay.ai",
+      "phone": "9840000020",
+      "password": "$2b$12$yGMLRQzLKzweVjMDsP5tC.Ivf2Z1DKcZBuvXlco1ehbL5fy/FZSNO",
+      "password_hash": "$2b$12$yGMLRQzLKzweVjMDsP5tC.Ivf2Z1DKcZBuvXlco1ehbL5fy/FZSNO",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Sanjota",
+      "joining_date": "2024-03-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T09:56:55",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 20,
+      "emp_id": "MMSR21",
+      "name": "Likitha",
+      "email": "likhitha@makemystay.ai",
+      "phone": "9840000021",
+      "password": "$2b$12$JuBCe9lYAcQoAbab0GrQBeoiAmAwXhcBOmmPRjbqJhaJKoudXf7/6",
+      "password_hash": "$2b$12$JuBCe9lYAcQoAbab0GrQBeoiAmAwXhcBOmmPRjbqJhaJKoudXf7/6",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Kesava",
+      "joining_date": "2024-03-15",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:12:56",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 24,
+      "emp_id": "MMSR25",
+      "name": "Nagarjuna",
+      "email": "nagarjuna@makemystay.ai",
+      "phone": "9840000025",
+      "password": "$2b$12$FhRq5YjvUqXD4jqm3SFWV.POeNazdT0lN1hhB4.MjsqAe8ISNLtym",
+      "password_hash": "$2b$12$FhRq5YjvUqXD4jqm3SFWV.POeNazdT0lN1hhB4.MjsqAe8ISNLtym",
+      "role": "EMPLOYEE",
+      "designation": "BDA & Ops Manager",
+      "department": "Operations",
+      "reporting_manager": "Gowtham N",
+      "joining_date": "2024-05-15",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": true,
+      "last_login_at": null,
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 25,
+      "emp_id": "MMSR26",
+      "name": "Lukmanul Hateem M A",
+      "email": "lukmanul.hakeem@makemystay.ai",
+      "phone": "9840000026",
+      "password": "$2b$12$jTYznzhCrRDFN9CvPZiQueSS3CGkSPCsVc82wY5X5izoSqf/pDhCm",
+      "password_hash": "$2b$12$jTYznzhCrRDFN9CvPZiQueSS3CGkSPCsVc82wY5X5izoSqf/pDhCm",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Kesava",
+      "joining_date": "2024-06-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T07:24:55",
+      "monthly_target": 0.0,
+      "is_team_leader": null
+    },
+    {
+      "id": 26,
+      "emp_id": "MMSR-GUEST",
+      "name": "Guest",
+      "email": "guestuser@makemystay.ai",
+      "phone": "",
+      "password": "$2b$12$SqovWfWrXmksFZo1yIWLCOfFPA4I1ogfpuExANdCeUjp/Mq6Tfv16",
+      "password_hash": "$2b$12$SqovWfWrXmksFZo1yIWLCOfFPA4I1ogfpuExANdCeUjp/Mq6Tfv16",
+      "role": "GUEST",
+      "designation": "Guest",
+      "department": null,
+      "reporting_manager": null,
+      "joining_date": null,
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-04T12:53:54",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 46,
+      "emp_id": "MMSR36",
+      "name": "Chaithra",
+      "email": "chaithra@makemystay.ai",
+      "phone": "9999999999",
+      "password": "Welcome@123",
+      "password_hash": "$2b$12$HOwWJsMnolyvZ9QqyBFRSOBi1mVbjaQC/zKHXnPtoFAM.E3yAGSVe",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Gowtham N",
+      "joining_date": "2024-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-05T10:33:06",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 60,
+      "emp_id": "MMSR35",
+      "name": "Akhila G",
+      "email": "akhila.g@makemystay.ai",
+      "phone": "9999999999",
+      "password": "$2b$12$qQZiw1iyq34lAS3Sv6bZJefu4uksB0JmBaO083YBhNkOvBg9LQt4a",
+      "password_hash": "$2b$12$qQZiw1iyq34lAS3Sv6bZJefu4uksB0JmBaO083YBhNkOvBg9LQt4a",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Gowtham N",
+      "joining_date": null,
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T04:43:29",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 70,
+      "emp_id": "MMSR29",
+      "name": "Ankit Prajapati",
+      "email": "ankit.prajapati@makemystay.ai",
+      "phone": "9840000027",
+      "password": "$2b$12$.ZLQ7fLIca5jqPW9DyZ8pOthirCBAS0/uVTAsXGvLbhGx0/mGuJFa",
+      "password_hash": "$2b$12$.ZLQ7fLIca5jqPW9DyZ8pOthirCBAS0/uVTAsXGvLbhGx0/mGuJFa",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Sanjota",
+      "joining_date": "2024-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T07:04:00",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 71,
+      "emp_id": "MMSR28",
+      "name": "Pavan Tavarageri",
+      "email": "pavan.tavarageri@makemystay.ai",
+      "phone": "9840000028",
+      "password": "$2b$12$ZOeMUwpwvvlyPffVTIyGc.kAKb6KoFyZlWDdjIckRg7qQh..gLFP.",
+      "password_hash": "$2b$12$ZOeMUwpwvvlyPffVTIyGc.kAKb6KoFyZlWDdjIckRg7qQh..gLFP.",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Sanjota",
+      "joining_date": "2024-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-16T07:04:02",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 72,
+      "emp_id": "MMSR30",
+      "name": "Mounika Rudraraju",
+      "email": "mounika.rudraraju@makemystay.ai",
+      "phone": "9840000029",
+      "password": "$2b$12$Tlc7b42eZpUAIvYW7aH9eeO46WgWip6yHKSXnuiy1A1TeMi2gcPdW",
+      "password_hash": "$2b$12$Tlc7b42eZpUAIvYW7aH9eeO46WgWip6yHKSXnuiy1A1TeMi2gcPdW",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Arun N",
+      "joining_date": "2024-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:25:40",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 73,
+      "emp_id": "MMSR31",
+      "name": "kaveri Gogoi",
+      "email": "kaveri.gogoi@makemystay.ai",
+      "phone": "9840000030",
+      "password": "$2b$12$lad4G4TEKOeeMP1UfQAeNuTIDWKlyOV7uV3TMuh4Mr2XqTX3tLak2",
+      "password_hash": "$2b$12$lad4G4TEKOeeMP1UfQAeNuTIDWKlyOV7uV3TMuh4Mr2XqTX3tLak2",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Arun N",
+      "joining_date": "2024-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:08:06",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 74,
+      "emp_id": "MMSR32",
+      "name": "Bavitha",
+      "email": "bavitha@makemystay.ai",
+      "phone": "9840000031",
+      "password": "$2b$12$j/isKInX2Qc2v2sXxBf89elm7Ei45Rc7p97aliL0wNPtL4KcfPBcG",
+      "password_hash": "$2b$12$j/isKInX2Qc2v2sXxBf89elm7Ei45Rc7p97aliL0wNPtL4KcfPBcG",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Gowtham N",
+      "joining_date": "2024-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:05:02",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 75,
+      "emp_id": "MMSR33",
+      "name": "Gyananjay",
+      "email": "gyananjay@makemystay.ai",
+      "phone": "9840000032",
+      "password": "$2b$12$beqInTrtaQkvuvcMV1j5lu3nJu3EnnaQyb/C8IxhjhN7Ag3UpFe6q",
+      "password_hash": "$2b$12$beqInTrtaQkvuvcMV1j5lu3nJu3EnnaQyb/C8IxhjhN7Ag3UpFe6q",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Gowtham N",
+      "joining_date": "2024-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:41:22",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 76,
+      "emp_id": "MMSR34",
+      "name": "Joys",
+      "email": "joys@makemystay.ai",
+      "phone": "9840000033",
+      "password": "$2b$12$AyG41h5wK8rpDxHc2gqXtek5aCePIEwHuxkY/3VhiKlY7sUR1FqQ2",
+      "password_hash": "$2b$12$AyG41h5wK8rpDxHc2gqXtek5aCePIEwHuxkY/3VhiKlY7sUR1FqQ2",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Gowtham N",
+      "joining_date": "2024-07-01",
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:12:41",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 80,
+      "emp_id": "MMSR37",
+      "name": "Vinod Kumar",
+      "email": "vinod.kumar@makemystay.ai",
+      "phone": "9999999999",
+      "password": "$2b$12$vCRbzASnHtvetqNYlxKtKOVPtit8..73QerWnH/5SN4wlujyRlb5m",
+      "password_hash": "$2b$12$vCRbzASnHtvetqNYlxKtKOVPtit8..73QerWnH/5SN4wlujyRlb5m",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Kesava",
+      "joining_date": null,
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:08:10",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 81,
+      "emp_id": "MMSR38",
+      "name": "Kuncha Pavani",
+      "email": "kuncha.pavani@makemystay.ai",
+      "phone": "9999999999",
+      "password": "$2b$12$/e1epQRb1hpoU4ptY5bTUODreq3LeM98gh.apwwnNjxY4o5wcJE1y",
+      "password_hash": "$2b$12$/e1epQRb1hpoU4ptY5bTUODreq3LeM98gh.apwwnNjxY4o5wcJE1y",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Arun N",
+      "joining_date": null,
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-17T05:46:43",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 82,
+      "emp_id": "MMSR39",
+      "name": "Raj Singh",
+      "email": "raj.singh@makemystay.ai",
+      "phone": "9999999999",
+      "password": "$2b$12$49mOo9KjBticzcLBEJDdGenDEeXB6fcf1IUVuH0.gI.4PyRB8UG62",
+      "password_hash": "$2b$12$49mOo9KjBticzcLBEJDdGenDEeXB6fcf1IUVuH0.gI.4PyRB8UG62",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Arun N",
+      "joining_date": null,
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-06T05:32:23",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 83,
+      "emp_id": "MMSR40",
+      "name": "Dheeraj Yadav",
+      "email": "dheeraj.yadav@makemystay.ai",
+      "phone": "9999999999",
+      "password": "$2b$12$L1lRcNmM/R7T3yZBvWUj2ePHoTfV4hjZ0x8IT7jN9nrZzmLuYGHpe",
+      "password_hash": "$2b$12$L1lRcNmM/R7T3yZBvWUj2ePHoTfV4hjZ0x8IT7jN9nrZzmLuYGHpe",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Arun N",
+      "joining_date": null,
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-05T10:23:32",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    },
+    {
+      "id": 84,
+      "emp_id": "MMSR41",
+      "name": "Midabalam Manasa",
+      "email": "midabalam.manasa@makemystay.ai",
+      "phone": "9999999999",
+      "password": "$2b$12$2tXIM6nShG1zoBiDizW8Z..X16VRnIhth/HkAWKV4sG98rYe4Bnju",
+      "password_hash": "$2b$12$2tXIM6nShG1zoBiDizW8Z..X16VRnIhth/HkAWKV4sG98rYe4Bnju",
+      "role": "EMPLOYEE",
+      "designation": "R.M",
+      "department": "Sales",
+      "reporting_manager": "Kesava",
+      "joining_date": null,
+      "profile_image": null,
+      "status": "ACTIVE",
+      "must_change_password": false,
+      "last_login_at": "2026-11-04T06:41:34",
+      "monthly_target": 0.0,
+      "is_team_leader": false
+    }
+  ],
+  "teams": [
+    {
+      "id": 1,
+      "name": "Team Arun",
+      "leader_id": 3,
+      "active_from": "2026-10-01",
+      "active_until": null,
+      "is_active": true,
+      "target": 0.0
+    },
+    {
+      "id": 2,
+      "name": "Team Sanjota",
+      "leader_id": 5,
+      "active_from": "2026-07-01",
+      "active_until": null,
+      "is_active": true,
+      "target": 0.0
+    },
+    {
+      "id": 3,
+      "name": "Team Goutham",
+      "leader_id": 7,
+      "active_from": "2026-10-01",
+      "active_until": null,
+      "is_active": true,
+      "target": 0.0
+    },
+    {
+      "id": 4,
+      "name": "Team Kesava",
+      "leader_id": 17,
+      "active_from": "2026-07-01",
+      "active_until": null,
+      "is_active": true,
+      "target": 0.0
+    }
+  ],
+  "team_members": [
+    {
+      "id": 1,
+      "employee_id": 7,
+      "team_id": 1,
+      "start_date": "2026-07-01",
+      "end_date": "2026-09-30"
+    },
+    {
+      "id": 2,
+      "employee_id": 17,
+      "team_id": 1,
+      "start_date": "2026-07-01",
+      "end_date": "2026-09-30"
+    },
+    {
+      "id": 5,
+      "employee_id": 72,
+      "team_id": 1,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 6,
+      "employee_id": 73,
+      "team_id": 1,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 7,
+      "employee_id": 6,
+      "team_id": 2,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 8,
+      "employee_id": 8,
+      "team_id": 2,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 9,
+      "employee_id": 19,
+      "team_id": 2,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 11,
+      "employee_id": 70,
+      "team_id": 2,
+      "start_date": "2026-07-01",
+      "end_date": "2026-09-30"
+    },
+    {
+      "id": 12,
+      "employee_id": 71,
+      "team_id": 2,
+      "start_date": "2026-07-01",
+      "end_date": "2026-09-30"
+    },
+    {
+      "id": 13,
+      "employee_id": 24,
+      "team_id": 3,
+      "start_date": "2026-07-01",
+      "end_date": "2026-09-30"
+    },
+    {
+      "id": 14,
+      "employee_id": 46,
+      "team_id": 3,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 15,
+      "employee_id": 60,
+      "team_id": 3,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 17,
+      "employee_id": 74,
+      "team_id": 3,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 18,
+      "employee_id": 75,
+      "team_id": 3,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 19,
+      "employee_id": 76,
+      "team_id": 3,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 20,
+      "employee_id": 14,
+      "team_id": 4,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 21,
+      "employee_id": 20,
+      "team_id": 4,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 22,
+      "employee_id": 25,
+      "team_id": 4,
+      "start_date": "2026-07-01",
+      "end_date": null
+    },
+    {
+      "id": 24,
+      "employee_id": 71,
+      "team_id": 2,
+      "start_date": "2026-10-01",
+      "end_date": null
+    },
+    {
+      "id": 25,
+      "employee_id": 70,
+      "team_id": 2,
+      "start_date": "2026-10-01",
+      "end_date": null
+    }
+  ],
+  "employee_monthly_targets": [
+    {
+      "id": 1,
+      "employee_id": 1,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 2,
+      "employee_id": 1,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 3,
+      "employee_id": 2,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 4,
+      "employee_id": 2,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 5,
+      "employee_id": 3,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 6,
+      "employee_id": 3,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 7,
+      "employee_id": 4,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 8,
+      "employee_id": 4,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 9,
+      "employee_id": 5,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 10,
+      "employee_id": 5,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 11,
+      "employee_id": 6,
+      "month": "August",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 12,
+      "employee_id": 6,
+      "month": "July",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 13,
+      "employee_id": 7,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 14,
+      "employee_id": 7,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 15,
+      "employee_id": 8,
+      "month": "August",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 16,
+      "employee_id": 8,
+      "month": "July",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 17,
+      "employee_id": 9,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 18,
+      "employee_id": 9,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 19,
+      "employee_id": 10,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 20,
+      "employee_id": 10,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 21,
+      "employee_id": 11,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 22,
+      "employee_id": 11,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 23,
+      "employee_id": 12,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 24,
+      "employee_id": 12,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 27,
+      "employee_id": 14,
+      "month": "August",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 28,
+      "employee_id": 14,
+      "month": "July",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 33,
+      "employee_id": 17,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 34,
+      "employee_id": 17,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 37,
+      "employee_id": 19,
+      "month": "August",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 38,
+      "employee_id": 19,
+      "month": "July",
+      "year": 2026,
+      "target": 60000.0
+    },
+    {
+      "id": 39,
+      "employee_id": 20,
+      "month": "August",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 40,
+      "employee_id": 20,
+      "month": "July",
+      "year": 2026,
+      "target": 70000.0
+    },
+    {
+      "id": 47,
+      "employee_id": 24,
+      "month": "August",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 48,
+      "employee_id": 24,
+      "month": "July",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 49,
+      "employee_id": 25,
+      "month": "August",
+      "year": 2026,
+      "target": 100000.0
+    },
+    {
+      "id": 50,
+      "employee_id": 25,
+      "month": "July",
+      "year": 2026,
+      "target": 50000.0
+    },
+    {
+      "id": 101,
+      "employee_id": 1,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 102,
+      "employee_id": 2,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 103,
+      "employee_id": 3,
+      "month": "September",
+      "year": 2026,
+      "target": 150000.0
+    },
+    {
+      "id": 104,
+      "employee_id": 4,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 105,
+      "employee_id": 5,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 106,
+      "employee_id": 6,
+      "month": "September",
+      "year": 2026,
+      "target": 135000.0
+    },
+    {
+      "id": 107,
+      "employee_id": 7,
+      "month": "September",
+      "year": 2026,
+      "target": 150000.0
+    },
+    {
+      "id": 108,
+      "employee_id": 8,
+      "month": "September",
+      "year": 2026,
+      "target": 135000.0
+    },
+    {
+      "id": 109,
+      "employee_id": 9,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 110,
+      "employee_id": 10,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 111,
+      "employee_id": 11,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 112,
+      "employee_id": 12,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 113,
+      "employee_id": 14,
+      "month": "September",
+      "year": 2026,
+      "target": 135000.0
+    },
+    {
+      "id": 116,
+      "employee_id": 17,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 117,
+      "employee_id": 19,
+      "month": "September",
+      "year": 2026,
+      "target": 120000.0
+    },
+    {
+      "id": 118,
+      "employee_id": 20,
+      "month": "September",
+      "year": 2026,
+      "target": 125000.0
+    },
+    {
+      "id": 119,
+      "employee_id": 24,
+      "month": "September",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 120,
+      "employee_id": 25,
+      "month": "September",
+      "year": 2026,
+      "target": 125000.0
+    },
+    {
+      "id": 121,
+      "employee_id": 1,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 122,
+      "employee_id": 2,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 123,
+      "employee_id": 3,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 124,
+      "employee_id": 4,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 125,
+      "employee_id": 5,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 126,
+      "employee_id": 6,
+      "month": "October",
+      "year": 2026,
+      "target": 120000.0
+    },
+    {
+      "id": 127,
+      "employee_id": 7,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 128,
+      "employee_id": 8,
+      "month": "October",
+      "year": 2026,
+      "target": 120000.0
+    },
+    {
+      "id": 129,
+      "employee_id": 9,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 130,
+      "employee_id": 10,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 131,
+      "employee_id": 11,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 132,
+      "employee_id": 12,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 133,
+      "employee_id": 14,
+      "month": "October",
+      "year": 2026,
+      "target": 120000.0
+    },
+    {
+      "id": 134,
+      "employee_id": 17,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 135,
+      "employee_id": 19,
+      "month": "October",
+      "year": 2026,
+      "target": 120000.0
+    },
+    {
+      "id": 136,
+      "employee_id": 20,
+      "month": "October",
+      "year": 2026,
+      "target": 120000.0
+    },
+    {
+      "id": 137,
+      "employee_id": 24,
+      "month": "October",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 138,
+      "employee_id": 25,
+      "month": "October",
+      "year": 2026,
+      "target": 120000.0
+    },
+    {
+      "id": 147,
+      "employee_id": 46,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 148,
+      "employee_id": 60,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 219,
+      "employee_id": 71,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 220,
+      "employee_id": 70,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 221,
+      "employee_id": 76,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 222,
+      "employee_id": 74,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 223,
+      "employee_id": 75,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 224,
+      "employee_id": 73,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 225,
+      "employee_id": 72,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 226,
+      "employee_id": 80,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 227,
+      "employee_id": 81,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 228,
+      "employee_id": 82,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 229,
+      "employee_id": 83,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 230,
+      "employee_id": 84,
+      "month": "October",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 231,
+      "employee_id": 1,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 232,
+      "employee_id": 2,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 233,
+      "employee_id": 3,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 234,
+      "employee_id": 4,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 235,
+      "employee_id": 5,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 236,
+      "employee_id": 6,
+      "month": "November",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 237,
+      "employee_id": 7,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 238,
+      "employee_id": 8,
+      "month": "November",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 239,
+      "employee_id": 9,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 240,
+      "employee_id": 10,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 241,
+      "employee_id": 11,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 242,
+      "employee_id": 12,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 243,
+      "employee_id": 14,
+      "month": "November",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 244,
+      "employee_id": 17,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 245,
+      "employee_id": 19,
+      "month": "November",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 246,
+      "employee_id": 20,
+      "month": "November",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 247,
+      "employee_id": 24,
+      "month": "November",
+      "year": 2026,
+      "target": 0.0
+    },
+    {
+      "id": 248,
+      "employee_id": 25,
+      "month": "November",
+      "year": 2026,
+      "target": 55000.0
+    },
+    {
+      "id": 249,
+      "employee_id": 46,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 250,
+      "employee_id": 60,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 251,
+      "employee_id": 71,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 252,
+      "employee_id": 70,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 253,
+      "employee_id": 76,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 254,
+      "employee_id": 74,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 255,
+      "employee_id": 75,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 256,
+      "employee_id": 73,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 257,
+      "employee_id": 72,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 258,
+      "employee_id": 80,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 259,
+      "employee_id": 81,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 260,
+      "employee_id": 82,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 261,
+      "employee_id": 83,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    },
+    {
+      "id": 262,
+      "employee_id": 84,
+      "month": "November",
+      "year": 2026,
+      "target": 30000.0
+    }
+  ]
+}

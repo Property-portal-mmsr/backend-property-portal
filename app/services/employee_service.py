@@ -27,7 +27,11 @@ class EmployeeService:
     @staticmethod
     def get_all_employees(db: Session) -> List[EmployeeResponse]:
         emps = EmployeeRepository.get_all(db)
-        return [EmployeeResponse.from_db(e) for e in emps]
+        return [
+            EmployeeResponse.from_db(e)
+            for e in emps
+            if (e.emp_id or "") not in ("MMSR16", "MMSR17")
+        ]
 
     @staticmethod
     def get_employee_by_emp_id(db: Session, emp_id: str) -> Optional[EmployeeResponse]:
@@ -75,10 +79,17 @@ class EmployeeService:
         emp = EmployeeRepository.get_by_emp_id(db, emp_id)
         if not emp:
             return None
-        emp.status = status_val.upper()
-        db.commit()
-        db.refresh(emp)
-        return EmployeeResponse.from_db(emp)
+        from datetime import date as _date
+        from app.services.eligibility_service import EligibilityService
+        updated = EligibilityService.change_employee_employment_status(
+            db=db,
+            emp=emp,
+            new_status=status_val.upper(),
+            effective_date=_date.today(),
+            reason=f"Status updated via Employee Hub to {status_val.upper()}",
+            changed_by="Admin",
+        )
+        return EmployeeResponse.from_db(updated)
 
     @staticmethod
     def get_login_report(db: Session, month: Optional[str] = None) -> LoginReportResponse:

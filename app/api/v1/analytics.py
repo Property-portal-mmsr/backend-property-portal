@@ -4,7 +4,7 @@ GET /api/v1/analytics/dashboard
 GET /api/v1/analytics/filters
 
 Requires JWT authentication (Bearer token).
-All KPI / chart / table calculations are performed server-side.
+All KPI / chart / table calculations are performed server-side from database configurations.
 The frontend only receives the final computed JSON.
 """
 
@@ -29,18 +29,26 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
     summary="Performance Analytics Dashboard",
     description=(
         "Returns fully-computed dashboard data including KPIs, charts, "
-        "leaderboard, and performance table. All calculations are performed "
-        "server-side from live Google Sheet data joined with the Employee table. "
-        "Requires JWT authentication."
+        "leaderboard, performance table, team performance table, and period breakdowns. "
+        "All calculations are performed server-side from live Google Sheet data "
+        "joined with database PeriodConfiguration and Employee employment history."
     ),
 )
 def get_dashboard(
     month: Optional[str] = Query(
         None,
-        description="Filter by month in YYYY-MM format (e.g. 2026-04). "
-                    "Also drives the daily-revenue chart and prev/current month comparison.",
-        examples=["2026-04"],
+        description="Filter by month in YYYY-MM format (e.g. 2026-11).",
+        examples=["2026-11"],
         pattern=r"^\d{4}-\d{2}$",
+    ),
+    period_code: Optional[str] = Query(
+        None,
+        description="Optional specific period code (e.g. 2026-11-H1 or 2026-11-H2).",
+        examples=["2026-11-H2"],
+    ),
+    period_id: Optional[int] = Query(
+        None,
+        description="Optional specific period database ID.",
     ),
     employee_id: Optional[int] = Query(
         None,
@@ -55,20 +63,16 @@ def get_dashboard(
     start_date: Optional[date] = Query(
         None,
         description="Filter records on or after this date (YYYY-MM-DD).",
-        examples=["2026-04-01"],
+        examples=["2026-11-01"],
     ),
     end_date: Optional[date] = Query(
         None,
         description="Filter records on or before this date (YYYY-MM-DD).",
-        examples=["2026-04-30"],
+        examples=["2026-11-15"],
     ),
     db: Session = Depends(get_db),
     current_user: Employee = Depends(get_current_user),
 ):
-    """
-    Fetch live Google Sheet data, join with active Employee table,
-    apply filters, and return fully computed dashboard JSON.
-    """
     MIN_REPORTING_DATE = date(2026, 9, 1)
 
     if start_date and start_date < MIN_REPORTING_DATE:
@@ -103,6 +107,8 @@ def get_dashboard(
             rm_name=rm_name,
             start_date=start_date,
             end_date=end_date,
+            period_code=period_code,
+            period_id=period_id,
         )
     except RuntimeError as e:
         raise HTTPException(
@@ -119,22 +125,19 @@ def get_dashboard(
 @router.get(
     "/filters",
     summary="Available Dashboard Filters",
-    description="Returns available months and RM names for populating filter dropdowns. Requires JWT authentication.",
+    description="Returns available months, periods, and active RM names for populating filter dropdowns.",
 )
 def get_dashboard_filters(
     db: Session = Depends(get_db),
     current_user: Employee = Depends(get_current_user),
 ):
-    """
-    Returns the available_months and available_rms for dropdown filters.
-    Fetches a full unfiltered dashboard and extracts metadata only.
-    """
     try:
         result = build_dashboard(db=db)
         return {
             "available_months": result.available_months,
             "available_rms": result.available_rms,
             "available_employees": result.available_employees,
+            "available_periods": result.available_periods,
         }
     except RuntimeError as e:
         raise HTTPException(

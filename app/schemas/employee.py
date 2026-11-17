@@ -13,8 +13,11 @@ class EmployeeCreate(BaseModel):
     department: Optional[str] = ""
     reporting_manager: Optional[str] = ""
     joining_date: Optional[str] = ""
+    employment_end_date: Optional[str] = None
+    deactivation_effective_date: Optional[str] = None
     profile_image: Optional[str] = ""
     status: Optional[str] = "ACTIVE"
+    is_team_leader: Optional[bool] = False
 
 
 class EmployeeUpdate(BaseModel):
@@ -27,12 +30,16 @@ class EmployeeUpdate(BaseModel):
     department: Optional[str] = None
     reporting_manager: Optional[str] = None
     joining_date: Optional[str] = None
+    employment_end_date: Optional[str] = None
+    deactivation_effective_date: Optional[str] = None
     profile_image: Optional[str] = None
     status: Optional[str] = None
+    is_team_leader: Optional[bool] = None
 
 
 class EmployeeResponse(BaseModel):
     id: str
+    db_id: Optional[int] = None
     name: str
     email: str
     phone: str
@@ -42,8 +49,11 @@ class EmployeeResponse(BaseModel):
     department: Optional[str] = ""
     reporting_manager: Optional[str] = ""
     joining_date: Optional[str] = ""
+    employment_end_date: Optional[str] = None
+    deactivation_effective_date: Optional[str] = None
     profile_image: Optional[str] = ""
     last_login_at: Optional[str] = None
+    is_team_leader: Optional[bool] = False
 
     @classmethod
     def from_db(cls, emp) -> "EmployeeResponse":
@@ -65,6 +75,7 @@ class EmployeeResponse(BaseModel):
 
         return cls(
             id=emp.emp_id or f"EMP{str(emp.id).zfill(3)}",
+            db_id=emp.id,
             name=emp.name or "",
             email=emp.email or "",
             phone=emp.phone or "",
@@ -74,8 +85,11 @@ class EmployeeResponse(BaseModel):
             department=getattr(emp, "department", "") or "",
             reporting_manager=getattr(emp, "reporting_manager", "") or "",
             joining_date=getattr(emp, "joining_date", "") or "",
+            employment_end_date=getattr(emp, "employment_end_date", None) or None,
+            deactivation_effective_date=getattr(emp, "deactivation_effective_date", None) or None,
             profile_image=getattr(emp, "profile_image", "") or "",
             last_login_at=_format_login_at(getattr(emp, "last_login_at", None)),
+            is_team_leader=bool(getattr(emp, "is_team_leader", False)),
         )
 
 
@@ -101,6 +115,3 @@ class LoginReportResponse(BaseModel):
     unused: int
     never_logged_in: int
     employees: List[LoginReportRow]
-
-
-
