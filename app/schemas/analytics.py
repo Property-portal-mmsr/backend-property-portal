@@ -1,6 +1,6 @@
 """
 Pydantic schemas for Performance Analytics Dashboard responses.
-All business calculations are performed in the backend.
+All business calculations are performed in the backend from database configurations.
 The frontend receives only final computed JSON.
 """
 
@@ -12,6 +12,7 @@ class IncentiveSlab(BaseModel):
     target: float
     incentive: float
     achieved: bool
+    label: Optional[str] = None
 
 
 class TeamMemberMini(BaseModel):
@@ -19,6 +20,10 @@ class TeamMemberMini(BaseModel):
     beds: float
     revenue: float
     target: float
+    pending_revenue: float = 0.0
+    achievement_pct: float = 0.0
+    incentive_slab: Optional[str] = None
+    incentive: float = 0.0
     status: str
 
 
@@ -30,7 +35,9 @@ class TeamLeaderIncentiveTrackerItem(BaseModel):
     team_beds: float
     team_revenue: float
     team_target: float
+    pending_revenue: float = 0.0
     achievement_pct: float
+    eligibility_status: str = "Not Eligible"
     slabs: List[IncentiveSlab]
     current_slab: Optional[float]
     next_slab_target: Optional[float]
@@ -63,6 +70,9 @@ class KPIResponse(BaseModel):
     overall_target: float
     achievement_pct: float
     active_rms: int
+    total_rm_incentives: float = 0.0
+    total_tl_incentives: float = 0.0
+    total_incentives: float = 0.0
 
 
 class MonthlyRevenueItem(BaseModel):
@@ -73,6 +83,26 @@ class MonthlyRevenueItem(BaseModel):
 class DailyRevenueItem(BaseModel):
     date: str           # e.g. "2026-04-15"
     revenue: float
+
+
+class DailyRevenueEmployeeItem(BaseModel):
+    employee_id: Optional[int] = None
+    employee_name: str
+    team_name: str
+    team_leader_name: str
+    transaction_count: int
+    beds_sold: float = 0.0
+    revenue: float
+
+
+class DailyRevenueDrilldownResponse(BaseModel):
+    selected_date: str
+    period_code: Optional[str] = None
+    period_name: Optional[str] = None
+    total_revenue: float
+    employee_count: int
+    total_transactions: int
+    employees: List[DailyRevenueEmployeeItem] = []
 
 
 class MonthComparisonItem(BaseModel):
@@ -107,10 +137,12 @@ class PerformanceTableItem(BaseModel):
     achievement_pct: float
     remaining_target: float
     incentive: float
+    incentive_slab: Optional[str] = None
     status: str         # "Target Achieved" | "In Progress" | "Needs Improvement"
     is_team_leader: bool = False
     next_slab: Optional[float] = None
-    team_name: Optional[str] = None   # e.g. "Team Arun N", "Team Gowtham N"
+    team_name: Optional[str] = None   # e.g. "Team Arun", "Team Goutham"
+    team_leader_name: Optional[str] = None
     is_top_rm: bool = False
     top_rm_status: Optional[str] = None
 
@@ -118,6 +150,28 @@ class PerformanceTableItem(BaseModel):
 class EmployeeFilterOption(BaseModel):
     id: int
     name: str
+
+
+class PeriodOptionItem(BaseModel):
+    id: int
+    period_code: str
+    period_name: str
+    start_date: str
+    end_date: str
+    month: str
+    period_type: str
+    approval_status: str = "APPROVED"
+
+
+class PeriodBreakdownItem(BaseModel):
+    period_id: int
+    period_code: str
+    period_name: str
+    start_date: str
+    end_date: str
+    kpis: KPIResponse
+    performance_table: List[PerformanceTableItem] = []
+    team_leader_tracker: List[TeamLeaderIncentiveTrackerItem] = []
 
 
 class DashboardResponse(BaseModel):
@@ -130,8 +184,10 @@ class DashboardResponse(BaseModel):
     performance_table: List[PerformanceTableItem]
     team_leader_tracker: List[TeamLeaderIncentiveTrackerItem]
     team_performance: List[TeamPerformanceChartItem]
-    # Metadata for filter dropdowns
+    # Metadata for filter dropdowns & period breakdowns
     available_months: List[str]
     available_rms: List[Union[EmployeeFilterOption, str]]
     available_employees: List[EmployeeFilterOption] = []
-
+    available_periods: List[PeriodOptionItem] = []
+    selected_period_code: Optional[str] = None
+    period_breakdowns: List[PeriodBreakdownItem] = []

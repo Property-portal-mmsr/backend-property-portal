@@ -7,6 +7,7 @@ Only extracts: Date, RM Name, Key Count, Revenue columns.
 import csv
 import io
 import re
+import time
 import httpx
 import logging
 from datetime import date
@@ -16,6 +17,10 @@ from dataclasses import dataclass
 from app.core.config import GOOGLE_SHEET_URL
 
 logger = logging.getLogger(__name__)
+
+_SHEET_CACHE_TTL_SECONDS = 30.0
+_cached_sheet_records: Optional[List["SheetRecord"]] = None
+_cached_sheet_timestamp: float = 0.0
 
 # Patterns that identify monthly separator/header rows (e.g. "April 2026", "August 2026")
 _MONTH_HEADER_RE = re.compile(
@@ -90,7 +95,7 @@ def _is_separator_row(row: List[str]) -> bool:
     return False
 
 
-def fetch_sheet_records() -> List[SheetRecord]:
+def fetch_sheet_records(force_refresh: bool = False) -> List[SheetRecord]:
     """
     Fetch the latest data from Google Sheets and return cleaned records.
     Filters:
@@ -100,9 +105,19 @@ def fetch_sheet_records() -> List[SheetRecord]:
     - Empty Key Count -> 0, Empty Revenue -> 0
     - Trims spaces from RM names
     """
+    global _cached_sheet_records, _cached_sheet_timestamp
+
     if not GOOGLE_SHEET_URL:
         logger.warning("GOOGLE_SHEET_URL not configured, returning empty records.")
         return []
+
+    now = time.monotonic()
+    if (
+        not force_refresh
+        and _cached_sheet_records is not None
+        and (now - _cached_sheet_timestamp) < _SHEET_CACHE_TTL_SECONDS
+    ):
+        return list(_cached_sheet_records)
 
     sheet_id = _extract_sheet_id(GOOGLE_SHEET_URL)
     csv_url = (
@@ -183,5 +198,7 @@ def fetch_sheet_records() -> List[SheetRecord]:
             )
         )
 
+    _cached_sheet_records = records
+    _cached_sheet_timestamp = time.monotonic()
     logger.info(f"Fetched {len(records)} valid records from Google Sheet.")
-    return records
+    return list(records)

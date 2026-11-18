@@ -16,6 +16,16 @@ from app.models.property import Property
 from app.models.audit_log import AuditLog
 from app.models.password_reset_request import PasswordResetRequest
 from app.models.team import Team, TeamMember
+from app.models.period_config import (
+    PeriodConfiguration,
+    EmployeeEmploymentHistory,
+    PeriodTeamAssignment,
+    PeriodTargetConfiguration,
+    PeriodIncentiveConfiguration,
+    PeriodTeamTargetConfiguration,
+    PerformanceCalculationRecord,
+    ConfigurationAuditHistory,
+)
 from app.repositories.property_repository import PropertyRepository
 
 from app.repositories.employee_repository import EmployeeRepository
@@ -167,6 +177,8 @@ def startup_seed_db():
     try:
         PropertyRepository.seed_default_properties(db)
         EmployeeRepository.seed_default_employees(db)
+        from app.services.migration_seed_service import ensure_period_system_migrated_and_seeded
+        ensure_period_system_migrated_and_seeded(db)
     finally:
         db.close()
 

@@ -18,6 +18,8 @@ class Employee(Base):
     department = Column(String(100), nullable=True)
     reporting_manager = Column(String(100), nullable=True)
     joining_date = Column(String(20), nullable=True)
+    employment_end_date = Column(String(20), nullable=True)
+    deactivation_effective_date = Column(String(20), nullable=True)
     profile_image = Column(String(255), nullable=True)
     status = Column(String(20), default="ACTIVE")
     must_change_password = Column(Boolean, default=False, nullable=True)
