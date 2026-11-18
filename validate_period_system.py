@@ -90,11 +90,11 @@ def run_all_validations():
 
         print("=== 3. NOVEMBER FIRST HALF (NOV 1–15, 2026) VALIDATION ===")
         dash_h1 = build_dashboard(db, month="2026-11", period_code="2026-11-H1")
-        assert dash_h1.kpis.overall_target == 720000.0, f"H1 target expected 720000.0, got {dash_h1.kpis.overall_target}"
-        assert dash_h1.kpis.active_rms == 19, f"H1 active RMs expected 19, got {dash_h1.kpis.active_rms}"
-        assert not any(p.rm_name in ("Raj Singh", "Sanjota") for p in dash_h1.performance_table), "Raj Singh & Sanjota must be excluded in H1"
+        assert dash_h1.kpis.overall_target == 690000.0, f"H1 target expected 690000.0, got {dash_h1.kpis.overall_target}"
+        assert dash_h1.kpis.active_rms == 18, f"H1 active RMs expected 18, got {dash_h1.kpis.active_rms}"
+        assert not any(p.rm_name in ("Raj Singh", "Sanjota", "Chaithra") for p in dash_h1.performance_table), "Raj Singh, Sanjota & Chaithra must be excluded in H1"
         assert dash_h1.kpis.total_rm_incentives == 34000.0, f"H1 RM incentives expected 34000.0, got {dash_h1.kpis.total_rm_incentives}"
-        print("  [PASS] November First Half (Nov 1–15) validated (19 active RMs, ₹7,20,000 target, ₹34,000 RM incentives, Raj Singh & Sanjota excluded).")
+        print("  [PASS] November First Half (Nov 1–15) validated (18 active RMs, ₹6,90,000 target, ₹34,000 RM incentives, Raj Singh, Sanjota & Chaithra excluded).")
 
         print("=== 4. NOVEMBER SECOND HALF (NOV 16–30, 2026) VALIDATION ===")
         dash_h2 = build_dashboard(db, month="2026-11", period_code="2026-11-H2")

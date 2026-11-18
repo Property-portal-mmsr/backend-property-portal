@@ -21,7 +21,11 @@ from sqlalchemy.orm import Session
 
 from app.models.employee import Employee
 from app.models.employee_monthly_target import EmployeeMonthlyTarget
-from app.models.period_config import PeriodConfiguration
+from app.models.period_config import (
+    PeriodConfiguration,
+    PeriodTeamAssignment,
+    PeriodTeamTargetConfiguration,
+)
 from app.services.google_sheet_service import SheetRecord, fetch_sheet_records
 from app.services.eligibility_service import EligibilityService
 from app.services.calculation_service import (
@@ -31,6 +35,8 @@ from app.services.calculation_service import (
 )
 from app.schemas.analytics import (
     DailyRevenueItem,
+    DailyRevenueEmployeeItem,
+    DailyRevenueDrilldownResponse,
     DashboardResponse,
     KPIResponse,
     LeaderboardItem,
@@ -427,6 +433,18 @@ def build_dashboard(
         for m, r in sorted(monthly_map.items())
     ]
 
+    # Determine active period day-of-month bounds when a specific period or date range is selected
+    period_start_day: Optional[int] = None
+    period_end_day: Optional[int] = None
+    if (period_code or period_id) and len(matched_periods) == 1:
+        period_start_day = matched_periods[0].start_date.day
+        period_end_day = matched_periods[0].end_date.day
+    elif start_date or end_date:
+        if start_date and start_date.strftime("%Y-%m") == current_month_str:
+            period_start_day = start_date.day
+        if end_date and end_date.strftime("%Y-%m") == current_month_str:
+            period_end_day = end_date.day
+
     # 10. Daily Revenue Chart (for current/selected month or period)
     daily_map: Dict[str, float] = defaultdict(float)
     for rec, emp in enriched:
@@ -436,9 +454,13 @@ def build_dashboard(
             continue
         if end_date and rec.date > end_date:
             continue
-        if period_code and len(matched_periods) == 1:
+        if (period_code or period_id) and len(matched_periods) == 1:
             if rec.date < matched_periods[0].start_date or rec.date > matched_periods[0].end_date:
                 continue
+        if period_start_day is not None and rec.date.day < period_start_day:
+            continue
+        if period_end_day is not None and rec.date.day > period_end_day:
+            continue
         if emp and not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map):
             continue
         if employee_id and (not emp or emp.id != employee_id):
@@ -455,10 +477,14 @@ def build_dashboard(
         for d, r in sorted(daily_map.items())
     ]
 
-    # 10b. Previous Month Daily Revenue
+    # 10b. Previous Month Daily Revenue (filtered to corresponding period day-of-month range if selected)
     prev_daily_map: Dict[str, float] = defaultdict(float)
     for rec, emp in enriched:
         if _record_month(rec) != prev_month_str:
+            continue
+        if period_start_day is not None and rec.date.day < period_start_day:
+            continue
+        if period_end_day is not None and rec.date.day > period_end_day:
             continue
         if emp and not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map):
             continue
@@ -547,3 +573,168 @@ def build_dashboard(
         selected_period_code=selected_code,
         period_breakdowns=period_breakdowns,
     )
+
+
+def build_daily_revenue_drilldown(
+    db: Session,
+    target_date: date,
+    month: Optional[str] = None,
+    period_code: Optional[str] = None,
+    period_id: Optional[int] = None,
+    employee_id: Optional[int] = None,
+    rm_name: Optional[str] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+) -> DailyRevenueDrilldownResponse:
+    """
+    Computes the employee-wise revenue breakdown for a single selected date (`target_date`).
+    Enforces period compatibility and effective-dated employee eligibility.
+    """
+    if month and month != "All Months" and target_date.strftime("%Y-%m") != month:
+        raise ValueError(
+            f"Selected date {target_date.isoformat()} does not belong to selected month {month}"
+        )
+
+    if start_date and target_date < start_date:
+        raise ValueError(
+            f"Selected date {target_date.isoformat()} is earlier than start date {start_date.isoformat()}"
+        )
+
+    if end_date and target_date > end_date:
+        raise ValueError(
+            f"Selected date {target_date.isoformat()} is later than end date {end_date.isoformat()}"
+        )
+
+    # Validate against explicitly selected period (First Half vs Second Half)
+    explicit_period: Optional[PeriodConfiguration] = None
+    if period_id is not None:
+        explicit_period = (
+            db.query(PeriodConfiguration).filter(PeriodConfiguration.id == period_id).first()
+        )
+    elif period_code:
+        explicit_period = (
+            db.query(PeriodConfiguration)
+            .filter(PeriodConfiguration.period_code == period_code)
+            .first()
+        )
+
+    if explicit_period is not None:
+        if target_date < explicit_period.start_date or target_date > explicit_period.end_date:
+            raise ValueError(
+                f"Date {target_date.isoformat()} is outside the selected period "
+                f"'{explicit_period.period_name}' ({explicit_period.start_date.isoformat()} to {explicit_period.end_date.isoformat()})"
+            )
+
+    # Resolve the PeriodConfiguration covering `target_date` for team & leader attribution
+    date_period = explicit_period or (
+        db.query(PeriodConfiguration)
+        .filter(
+            PeriodConfiguration.configuration_status == "ACTIVE",
+            PeriodConfiguration.start_date <= target_date,
+            PeriodConfiguration.end_date >= target_date,
+        )
+        .order_by(PeriodConfiguration.id.desc())
+        .first()
+    )
+
+    all_db_employees: List[Employee] = db.query(Employee).all()
+    all_employees_map: Dict[int, Employee] = {e.id: e for e in all_db_employees}
+    hist_map = EligibilityService.build_history_map(db)
+    rm_map = _build_rm_map(all_db_employees)
+
+    emp_team_map: Dict[int, Tuple[str, str]] = {}
+    if date_period is not None:
+        assignments = (
+            db.query(PeriodTeamAssignment)
+            .filter(PeriodTeamAssignment.period_id == date_period.id)
+            .all()
+        )
+        for a in assignments:
+            leader_emp = all_employees_map.get(a.team_leader_id)
+            leader_name = leader_emp.name if leader_emp and leader_emp.name else "—"
+            t_name = a.team_name or (f"Team {leader_name.split()[0]}" if leader_name != "—" else "—")
+            emp_team_map[a.employee_id] = (t_name, leader_name)
+
+        team_cfgs = (
+            db.query(PeriodTeamTargetConfiguration)
+            .filter(PeriodTeamTargetConfiguration.period_id == date_period.id)
+            .all()
+        )
+        for tc in team_cfgs:
+            if tc.team_leader_id not in emp_team_map:
+                leader_emp = all_employees_map.get(tc.team_leader_id)
+                leader_name = leader_emp.name if leader_emp and leader_emp.name else "—"
+                emp_team_map[tc.team_leader_id] = (tc.team_name or f"Team {leader_name.split()[0]}", leader_name)
+
+    raw_records = fetch_sheet_records()
+
+    # Group strictly by target_date and active eligible employee
+    grouped: Dict[int, dict] = {}
+    for rec in raw_records:
+        if rec.date != target_date:
+            continue
+        if rec.revenue <= 0:
+            continue
+
+        emp = _resolve_rm(rec.rm_name, rm_map)
+        if not emp:
+            continue
+
+        if date_period is not None:
+            if not EligibilityService.is_employee_eligible_for_period(
+                emp, date_period.start_date, date_period.end_date, hist_map
+            ):
+                continue
+        if not EligibilityService.is_employee_active_on_date(emp, target_date, hist_map):
+            continue
+
+        if employee_id and emp.id != employee_id:
+            continue
+        if rm_name:
+            rm_lower = rm_name.strip().lower()
+            name_to_check = (emp.name or "").lower()
+            if rm_lower not in name_to_check and name_to_check not in rm_lower:
+                continue
+
+        team_name, leader_name = emp_team_map.get(
+            emp.id,
+            ("—", emp.reporting_manager or "—"),
+        )
+
+        if emp.id not in grouped:
+            grouped[emp.id] = {
+                "employee_id": emp.id,
+                "employee_name": emp.name,
+                "team_name": team_name,
+                "team_leader_name": leader_name,
+                "transaction_count": 1,
+                "beds_sold": float(rec.key_count or 0.0),
+                "revenue": float(rec.revenue or 0.0),
+            }
+        else:
+            grouped[emp.id]["transaction_count"] += 1
+            grouped[emp.id]["beds_sold"] += float(rec.key_count or 0.0)
+            grouped[emp.id]["revenue"] += float(rec.revenue or 0.0)
+
+    employee_items = [
+        DailyRevenueEmployeeItem(**vals)
+        for vals in grouped.values()
+    ]
+    employee_items.sort(
+        key=lambda x: (x.revenue, x.transaction_count, x.employee_name.lower()),
+        reverse=True,
+    )
+
+    total_revenue = sum(item.revenue for item in employee_items)
+    total_transactions = sum(item.transaction_count for item in employee_items)
+
+    return DailyRevenueDrilldownResponse(
+        selected_date=target_date.isoformat(),
+        period_code=date_period.period_code if date_period else period_code,
+        period_name=date_period.period_name if date_period else None,
+        total_revenue=total_revenue,
+        employee_count=len(employee_items),
+        total_transactions=total_transactions,
+        employees=employee_items,
+    )
+

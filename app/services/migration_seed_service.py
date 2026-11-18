@@ -233,6 +233,13 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
             "effective_date": date(2026, 11, 1),
             "reason": "Deactivated effective November 1, 2026 (Employment end date: October 31, 2026)",
         },
+        {
+            "name": "Chaithra",
+            "employment_start": date(2024, 7, 1),
+            "employment_end": date(2026, 10, 31),
+            "effective_date": date(2026, 11, 1),
+            "reason": "Excluded from November 2026 calculations (Employment end date: October 31, 2026)",
+        },
     ]
 
     for spec in deactivation_specs:
@@ -435,12 +442,12 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
         for m_name in ["Ankit Prajapati", "Vinod"]:
             _ensure_team_member_window(team_kesava, m_name, date(2026, 11, 16), None)
 
-    # Update Team Goutham member windows for Nov 16 transitions
+    # Update Team Goutham member windows for Nov 16 transitions (Chaithra ends Oct 31, 2026)
     if team_goutham:
         chaithra_emp = _find_emp_by_name(all_employees, "Chaithra")
         if chaithra_emp:
             for tm in db.query(TeamMember).filter(TeamMember.team_id == team_goutham.id, TeamMember.employee_id == chaithra_emp.id).all():
-                tm.end_date = date(2026, 11, 15)
+                tm.end_date = date(2026, 10, 31)
         _ensure_team_member_window(team_goutham, "Pavan Tavarageri", date(2026, 11, 16), None)
 
     db.flush()
@@ -504,7 +511,7 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
                 .filter(PeriodTargetConfiguration.period_id == period.id)
                 .count()
             )
-            if has_targets >= len(individual_targets):
+            if has_targets == len(individual_targets):
                 return period
 
         # Clear any partial child records for clean initialization
@@ -756,7 +763,7 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
 
     # --- C. November 2026 First Half (Nov 1–15, 2026) ---
     # Preserves all previously approved first-half assignments, targets, and slabs,
-    # excluding Raj Singh and Sanjota (both inactive from Nov 1, 2026).
+    # excluding Raj Singh, Sanjota, and Chaithra (18 active RMs, ₹6,90,000 total target).
     _upsert_period(
         period_code="2026-11-H1",
         period_name="November 2026 First Half",
@@ -770,8 +777,8 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
                 "team": team_goutham,
                 "leader": goutham_emp,
                 "team_name": "Team Goutham",
-                "members": ["Chaithra", "Akhila G", "Bavitha", "Gyananjay", "Joys"],
-                "aggregate_target": 150000.0,
+                "members": ["Akhila G", "Bavitha", "Gyananjay", "Joys"],
+                "aggregate_target": 120000.0,
                 "tl_incentive": 12500.0,
                 "eligibility_pct": 100.0,
             },
@@ -805,22 +812,21 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
         ],
         individual_targets=[
             ("Chethan P", 55000.0),
-            ("Pritish Kumar Jena", 55000.0),
-            ("Kalyan Kumar Reddy", 55000.0),
-            ("Vinod", 55000.0),
-            ("Likitha", 55000.0),
-            ("Lukmanul Hateem M A", 55000.0),
-            ("Chaithra", 30000.0),
             ("Akhila G", 30000.0),
-            ("Ankit Prajapati", 30000.0),
-            ("Pavan Tavarageri", 30000.0),
-            ("Mounika Rudraraju", 30000.0),
-            ("kaveri Gogoi", 30000.0),
-            ("Bavitha", 30000.0),
-            ("Gyananjay", 30000.0),
-            ("Joys", 30000.0),
-            ("Vinod Kumar", 30000.0),
+            ("Likitha", 55000.0),
             ("Kuncha Pavani", 30000.0),
+            ("Ankit Prajapati", 30000.0),
+            ("kaveri Gogoi", 30000.0),
+            ("Kalyan Kumar Reddy", 55000.0),
+            ("Pritish Kumar Jena", 55000.0),
+            ("Gyananjay", 30000.0),
+            ("Bavitha", 30000.0),
+            ("Vinod Kumar", 30000.0),
+            ("Joys", 30000.0),
+            ("Lukmanul Hateem M A", 55000.0),
+            ("Mounika Rudraraju", 30000.0),
+            ("Vinod", 55000.0),
+            ("Pavan Tavarageri", 30000.0),
             ("Dheeraj Yadav", 30000.0),
             ("Midabalam Manasa", 30000.0),
         ],

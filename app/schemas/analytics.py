@@ -85,6 +85,26 @@ class DailyRevenueItem(BaseModel):
     revenue: float
 
 
+class DailyRevenueEmployeeItem(BaseModel):
+    employee_id: Optional[int] = None
+    employee_name: str
+    team_name: str
+    team_leader_name: str
+    transaction_count: int
+    beds_sold: float = 0.0
+    revenue: float
+
+
+class DailyRevenueDrilldownResponse(BaseModel):
+    selected_date: str
+    period_code: Optional[str] = None
+    period_name: Optional[str] = None
+    total_revenue: float
+    employee_count: int
+    total_transactions: int
+    employees: List[DailyRevenueEmployeeItem] = []
+
+
 class MonthComparisonItem(BaseModel):
     month: str          # e.g. "2026-04"
     revenue: float
