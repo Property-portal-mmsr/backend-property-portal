@@ -240,6 +240,13 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
             "effective_date": date(2026, 11, 1),
             "reason": "Excluded from November 2026 calculations (Employment end date: October 31, 2026)",
         },
+        {
+            "name": "Pavan Tavarageri",
+            "employment_start": date(2026, 10, 1),
+            "employment_end": date(2026, 11, 15),
+            "effective_date": date(2026, 11, 16),
+            "reason": "Excluded from November 2026 Second Half calculations (Employment end date: November 15, 2026)",
+        },
     ]
 
     for spec in deactivation_specs:
@@ -442,13 +449,18 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
         for m_name in ["Ankit Prajapati", "Vinod"]:
             _ensure_team_member_window(team_kesava, m_name, date(2026, 11, 16), None)
 
-    # Update Team Goutham member windows for Nov 16 transitions (Chaithra ends Oct 31, 2026)
+    # Update Team Goutham member windows for Nov 16 transitions (Chaithra ends Oct 31, 2026; Pavan excluded from Nov H2)
     if team_goutham:
         chaithra_emp = _find_emp_by_name(all_employees, "Chaithra")
         if chaithra_emp:
             for tm in db.query(TeamMember).filter(TeamMember.team_id == team_goutham.id, TeamMember.employee_id == chaithra_emp.id).all():
                 tm.end_date = date(2026, 10, 31)
-        _ensure_team_member_window(team_goutham, "Pavan Tavarageri", date(2026, 11, 16), None)
+        pavan_emp = _find_emp_by_name(all_employees, "Pavan Tavarageri")
+        if pavan_emp:
+            db.query(TeamMember).filter(
+                TeamMember.team_id == team_goutham.id,
+                TeamMember.employee_id == pavan_emp.id,
+            ).delete()
 
     db.flush()
 
@@ -519,6 +531,7 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
         db.query(PeriodTargetConfiguration).filter(PeriodTargetConfiguration.period_id == period.id).delete()
         db.query(PeriodIncentiveConfiguration).filter(PeriodIncentiveConfiguration.period_id == period.id).delete()
         db.query(PeriodTeamTargetConfiguration).filter(PeriodTeamTargetConfiguration.period_id == period.id).delete()
+        db.query(PerformanceCalculationRecord).filter(PerformanceCalculationRecord.period_id == period.id).delete()
 
         # Insert individual targets
         target_lookup: Dict[int, float] = {}
@@ -840,7 +853,7 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
     )
 
     # --- D. November 2026 Second Half (Nov 16–30, 2026) ---
-    # 18 Employees across 4 Teams (Goutham: ₹1.75L, Arun: ₹1.40L, Keshav: ₹2.15L, Madhav: ₹3.60L = ₹8.90L)
+    # 17 Employees across 4 Teams (Goutham: ₹1.40L, Arun: ₹1.40L, Keshav: ₹2.15L, Madhav: ₹3.60L = ₹8.55L)
     # RM Slabs: ₹35k -> ₹6k, ₹55k -> ₹10k, ₹90k -> ₹20k
     # TL Slab: 100% of Aggregate Team Target -> ₹20,000
     _upsert_period(
@@ -856,8 +869,8 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
                 "team": team_goutham,
                 "leader": goutham_emp,
                 "team_name": "Team Goutham",
-                "members": ["Akhila G", "Gyananjay", "Pavan Tavarageri", "Bavitha", "Joys"],
-                "aggregate_target": 175000.0,
+                "members": ["Akhila G", "Gyananjay", "Bavitha", "Joys"],
+                "aggregate_target": 140000.0,
                 "tl_incentive": 20000.0,
                 "eligibility_pct": 100.0,
             },
@@ -890,10 +903,9 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
             },
         ],
         individual_targets=[
-            # Team Goutham (5 * 35,000 = 1,75,000)
+            # Team Goutham (4 * 35,000 = 1,40,000)
             ("Akhila G", 35000.0),
             ("Gyananjay", 35000.0),
-            ("Pavan Tavarageri", 35000.0),
             ("Bavitha", 35000.0),
             ("Joys", 35000.0),
             # Team Arun (4 * 35,000 = 1,40,000)

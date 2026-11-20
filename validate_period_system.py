@@ -98,17 +98,22 @@ def run_all_validations():
 
         print("=== 4. NOVEMBER SECOND HALF (NOV 16–30, 2026) VALIDATION ===")
         dash_h2 = build_dashboard(db, month="2026-11", period_code="2026-11-H2")
-        assert dash_h2.kpis.overall_target == 890000.0, f"H2 target expected 890000.0, got {dash_h2.kpis.overall_target}"
-        assert dash_h2.kpis.active_rms == 18, f"H2 active RMs expected 18, got {dash_h2.kpis.active_rms}"
-        assert len(dash_h2.performance_table) == 18, f"H2 performance table expected 18 employees, got {len(dash_h2.performance_table)}"
-        assert not any(p.rm_name in ("Raj Singh", "Sanjota") for p in dash_h2.performance_table), "Raj Singh & Sanjota must be excluded in H2"
+        assert dash_h2.kpis.overall_target == 855000.0, f"H2 target expected 855000.0, got {dash_h2.kpis.overall_target}"
+        assert dash_h2.kpis.active_rms == 17, f"H2 active RMs expected 17, got {dash_h2.kpis.active_rms}"
+        assert len(dash_h2.performance_table) == 17, f"H2 performance table expected 17 employees, got {len(dash_h2.performance_table)}"
+        assert not any(p.rm_name in ("Raj Singh", "Sanjota", "Chaithra", "Pavan Tavarageri") for p in dash_h2.performance_table), "Raj Singh, Sanjota, Chaithra & Pavan Tavarageri must be excluded in H2"
+        assert not any(
+            m.name == "Pavan Tavarageri"
+            for t in dash_h2.team_leader_tracker
+            for m in t.team_members
+        ), "Pavan Tavarageri must not appear in H2 team tracker"
 
         h2_teams = {t.team_name: (t.team_leader_name, t.team_size, t.team_target) for t in dash_h2.team_leader_tracker}
-        assert h2_teams["Team Goutham"] == ("Goutham N", 5, 175000.0), f"H2 Team Goutham mismatch: {h2_teams.get('Team Goutham')}"
+        assert h2_teams["Team Goutham"] == ("Goutham N", 4, 140000.0), f"H2 Team Goutham mismatch: {h2_teams.get('Team Goutham')}"
         assert h2_teams["Team Arun"] == ("Arun N", 4, 140000.0), f"H2 Team Arun mismatch: {h2_teams.get('Team Arun')}"
         assert h2_teams["Team Keshav"] == ("Kesava", 5, 215000.0), f"H2 Team Keshav mismatch: {h2_teams.get('Team Keshav')}"
         assert h2_teams["Team Madhav"] == ("Madhava R", 4, 360000.0), f"H2 Team Madhav mismatch: {h2_teams.get('Team Madhav')}"
-        print("  [PASS] November Second Half (Nov 16–30) validated (18 employees, ₹8,90,000 aggregate target across 4 teams).")
+        print("  [PASS] November Second Half (Nov 16–30) validated (17 employees, ₹8,55,000 aggregate target across 4 teams, Pavan Tavarageri excluded).")
 
         print("=== 5. SECOND-HALF RM & TL INCENTIVE SLAB CALCULATION SCENARIOS ===")
         p_h2 = db.query(PeriodConfiguration).filter(PeriodConfiguration.period_code == "2026-11-H2").first()
@@ -135,7 +140,7 @@ def run_all_validations():
 
         # TL ₹20,000 at >= 100% of team aggregate target
         for t_name, expected_agg in [
-            ("Team Goutham", 175000.0),
+            ("Team Goutham", 140000.0),
             ("Team Arun", 140000.0),
             ("Team Keshav", 215000.0),
             ("Team Madhav", 360000.0),
