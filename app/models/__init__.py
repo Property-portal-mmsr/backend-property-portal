@@ -14,6 +14,7 @@ from app.models.period_config import (
     PeriodTeamTargetConfiguration,
     PerformanceCalculationRecord,
     ConfigurationAuditHistory,
+    PeriodEmployeeExclusion,
 )
 
 __all__ = [
@@ -33,5 +34,6 @@ __all__ = [
     "PeriodTeamTargetConfiguration",
     "PerformanceCalculationRecord",
     "ConfigurationAuditHistory",
+    "PeriodEmployeeExclusion",
 ]
 

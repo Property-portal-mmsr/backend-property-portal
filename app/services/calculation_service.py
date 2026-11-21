@@ -15,7 +15,7 @@ Zero employee names, IDs, dates, targets, or incentive slabs are hardcoded here.
 
 from collections import defaultdict
 from datetime import date, datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from sqlalchemy.orm import Session
 
 from app.models.employee import Employee
@@ -321,10 +321,13 @@ class CalculationService:
         custom_start: Optional[date] = None,
         custom_end: Optional[date] = None,
         persist_snapshot: bool = True,
+        exclusion_map: Optional[Dict[int, Set[int]]] = None,
     ) -> PeriodBreakdownItem:
         """
         Computes KPIs, RM Performance Table, and Team Leader Tracker for a single PeriodConfiguration.
         """
+        if exclusion_map is None:
+            exclusion_map = EligibilityService.build_period_exclusion_map(db)
         eff_start = max(period.start_date, custom_start) if custom_start else period.start_date
         eff_end = min(period.end_date, custom_end) if custom_end else period.end_date
 
@@ -358,7 +361,14 @@ class CalculationService:
         eligible_emp_ids = {
             emp_id
             for emp_id, emp in all_employees_map.items()
-            if EligibilityService.is_employee_eligible_for_period(emp, period.start_date, period.end_date, hist_map)
+            if EligibilityService.is_employee_eligible_for_period(
+                emp,
+                period.start_date,
+                period.end_date,
+                hist_map,
+                period_id=period.id,
+                exclusion_map=exclusion_map,
+            )
         }
 
         target_map: Dict[int, float] = {
@@ -386,7 +396,9 @@ class CalculationService:
                 continue
             if not emp or emp.id not in eligible_emp_ids:
                 continue
-            if not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map):
+            if not EligibilityService.is_employee_active_on_date(
+                emp, rec.date, hist_map, period_id=period.id, exclusion_map=exclusion_map
+            ):
                 continue
             period_records.append((rec, emp))
 

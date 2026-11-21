@@ -12,7 +12,7 @@ Rules:
 
 import json
 from datetime import date, datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ from app.models.employee import Employee
 from app.models.period_config import (
     EmployeeEmploymentHistory,
     ConfigurationAuditHistory,
+    PeriodEmployeeExclusion,
 )
 
 
@@ -83,15 +84,43 @@ class EligibilityService:
         return start_dt, end_dt, react_dt
 
     @staticmethod
+    def build_period_exclusion_map(
+        db: Session,
+    ) -> Dict[int, Set[int]]:
+        """
+        Returns a mapping of period_id -> set of employee_ids excluded from that period.
+        """
+        rows = db.query(PeriodEmployeeExclusion).all()
+        excl_map: Dict[int, Set[int]] = {}
+        for r in rows:
+            excl_map.setdefault(r.period_id, set()).add(r.employee_id)
+        return excl_map
+
+    @staticmethod
+    def is_employee_excluded_from_period(
+        emp_id: Optional[int],
+        period_id: Optional[int],
+        exclusion_map: Optional[Dict[int, Set[int]]] = None,
+    ) -> bool:
+        if emp_id is None or period_id is None or not exclusion_map:
+            return False
+        return emp_id in exclusion_map.get(period_id, set())
+
+    @staticmethod
     def is_employee_active_on_date(
         emp: Optional[Employee],
         check_date: date,
         history_map: Optional[Dict[int, List[EmployeeEmploymentHistory]]] = None,
+        period_id: Optional[int] = None,
+        exclusion_map: Optional[Dict[int, Set[int]]] = None,
     ) -> bool:
         """
-        Checks if `emp` was actively employed on `check_date`.
+        Checks if `emp` was actively employed on `check_date` and not excluded from `period_id`.
         """
         if not emp:
+            return False
+
+        if EligibilityService.is_employee_excluded_from_period(emp.id, period_id, exclusion_map):
             return False
 
         emp_status_upper = (emp.status or "ACTIVE").upper()
@@ -121,14 +150,20 @@ class EligibilityService:
         period_start: date,
         period_end: date,
         history_map: Optional[Dict[int, List[EmployeeEmploymentHistory]]] = None,
+        period_id: Optional[int] = None,
+        exclusion_map: Optional[Dict[int, Set[int]]] = None,
     ) -> bool:
         """
         Checks if `emp` is eligible to participate in the performance period [period_start, period_end].
         An employee is eligible if:
+        - They are not explicitly excluded from `period_id` via `period_employee_exclusions`
         - They joined on or before `period_end`
         - Their employment did not end before `period_start` (i.e. not deactivated on or before `period_start`)
         """
         if not emp:
+            return False
+
+        if EligibilityService.is_employee_excluded_from_period(emp.id, period_id, exclusion_map):
             return False
 
         emp_status_upper = (emp.status or "ACTIVE").upper()
@@ -176,6 +211,8 @@ class EligibilityService:
         period_start: date,
         period_end: date,
         history_map: Optional[Dict[int, List[EmployeeEmploymentHistory]]] = None,
+        period_id: Optional[int] = None,
+        exclusion_map: Optional[Dict[int, Set[int]]] = None,
     ) -> None:
         if not emp:
             raise HTTPException(
@@ -183,7 +220,8 @@ class EligibilityService:
                 detail="Employee not found",
             )
         if not EligibilityService.is_employee_eligible_for_period(
-            emp, period_start, period_end, history_map
+            emp, period_start, period_end, history_map,
+            period_id=period_id, exclusion_map=exclusion_map,
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
