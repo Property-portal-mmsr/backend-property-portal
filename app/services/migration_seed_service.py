@@ -33,6 +33,7 @@ from app.models.period_config import (
     PeriodTeamTargetConfiguration,
     PerformanceCalculationRecord,
     ConfigurationAuditHistory,
+    PeriodEmployeeExclusion,
 )
 
 logger = logging.getLogger(__name__)
@@ -853,10 +854,10 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
     )
 
     # --- D. November 2026 Second Half (Nov 16–30, 2026) ---
-    # 17 Employees across 4 Teams (Goutham: ₹1.40L, Arun: ₹1.40L, Keshav: ₹2.15L, Madhav: ₹3.60L = ₹8.55L)
+    # 16 Employees across 4 Teams (Goutham: ₹1.40L, Arun: ₹1.40L, Keshav: ₹1.80L, Madhav: ₹3.60L = ₹8.20L)
     # RM Slabs: ₹35k -> ₹6k, ₹55k -> ₹10k, ₹90k -> ₹20k
     # TL Slab: 100% of Aggregate Team Target -> ₹20,000
-    _upsert_period(
+    h2_period = _upsert_period(
         period_code="2026-11-H2",
         period_name="November 2026 Second Half",
         start_dt=date(2026, 11, 16),
@@ -887,8 +888,8 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
                 "team": team_kesava,
                 "leader": kesava_emp,
                 "team_name": "Team Keshav",
-                "members": ["Ankit Prajapati", "Vinod", "Vinod Kumar", "Lukmanul Hateem M A", "Midabalam Manasa"],
-                "aggregate_target": 215000.0,
+                "members": ["Ankit Prajapati", "Vinod", "Vinod Kumar", "Lukmanul Hateem M A"],
+                "aggregate_target": 180000.0,
                 "tl_incentive": 20000.0,
                 "eligibility_pct": 100.0,
             },
@@ -913,12 +914,11 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
             ("Dheeraj Yadav", 35000.0),
             ("Kuncha Pavani", 35000.0),
             ("Mounika Rudraraju", 35000.0),
-            # Team Keshav (35k + 55k + 35k + 55k + 35k = 2,15,000)
+            # Team Keshav (35k + 55k + 35k + 55k = 1,80,000)
             ("Ankit Prajapati", 35000.0),
             ("Vinod", 55000.0),
             ("Vinod Kumar", 35000.0),
             ("Lukmanul Hateem M A", 55000.0),
-            ("Midabalam Manasa", 35000.0),
             # Team Madhav (4 * 90,000 = 3,60,000)
             ("Pritish Kumar Jena", 90000.0),
             ("Kalyan Kumar Reddy", 90000.0),
@@ -934,6 +934,36 @@ def ensure_period_system_migrated_and_seeded(db: Session) -> dict:
             {"label": "100% Team Target -> ₹20,000", "threshold": 100.0, "incentive": 20000.0, "condition": "TEAM_TARGET_PCT", "method": "FIXED_SLAB", "priority": 1},
         ],
     )
+
+    # Seed period-specific exclusion for Midabalam Manasa in November 2026 Second Half
+    # without deleting or deactivating her employee master record.
+    manasa_emp = _find_emp_by_name(all_employees, "Midabalam Manasa")
+    if h2_period and manasa_emp:
+        existing_excl = (
+            db.query(PeriodEmployeeExclusion)
+            .filter(
+                PeriodEmployeeExclusion.period_id == h2_period.id,
+                PeriodEmployeeExclusion.employee_id == manasa_emp.id,
+            )
+            .first()
+        )
+        if not existing_excl:
+            db.add(
+                PeriodEmployeeExclusion(
+                    period_id=h2_period.id,
+                    employee_id=manasa_emp.id,
+                    reason="Excluded from November 2026 Second Half analytics per business rule",
+                )
+            )
+            _log_config_audit(
+                db,
+                entity_type="PeriodEmployeeExclusion",
+                entity_id=f"{h2_period.id}:{manasa_emp.id}",
+                previous_value=None,
+                new_value={"period_code": "2026-11-H2", "employee_name": manasa_emp.name},
+                changed_by="System Administrator",
+                reason="Exclude Midabalam Manasa from November 2026 Second Half",
+            )
 
     db.commit()
     return summary

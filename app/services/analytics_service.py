@@ -196,6 +196,7 @@ def build_dashboard(
     all_db_employees: List[Employee] = db.query(Employee).all()
     all_employees_map: Dict[int, Employee] = {e.id: e for e in all_db_employees}
     hist_map = EligibilityService.build_history_map(db)
+    exclusion_map = EligibilityService.build_period_exclusion_map(db)
 
     rm_map = _build_rm_map(all_db_employees)
 
@@ -207,12 +208,19 @@ def build_dashboard(
 
     # 4. Collect available months (including months from PeriodConfiguration and sheet records)
     sheet_months = {_record_month(r) for r, _ in enriched}
-    db_period_months = {
-        p.month
-        for p in db.query(PeriodConfiguration)
+    all_active_periods_list = (
+        db.query(PeriodConfiguration)
         .filter(PeriodConfiguration.configuration_status == "ACTIVE")
         .all()
-    }
+    )
+    db_period_months = {p.month for p in all_active_periods_list}
+
+    def _is_excluded_for_date(emp_id: int, rec_date: date) -> bool:
+        return any(
+            EligibilityService.is_employee_excluded_from_period(emp_id, p.id, exclusion_map)
+            for p in all_active_periods_list
+            if p.start_date <= rec_date <= p.end_date
+        )
     all_months = sorted(sheet_months | db_period_months, reverse=True)
     FROZEN_REPORTING_PERIODS = {"2026-04", "2026-05", "2026-06", "2026-07", "2026-08"}
     available_months = [m for m in all_months if m >= "2026-09" and m not in FROZEN_REPORTING_PERIODS]
@@ -272,6 +280,16 @@ def build_dashboard(
             month=current_month_str,
         )
 
+    if matched_periods:
+        available_employee_options = [
+            opt
+            for opt in available_employee_options
+            if not all(
+                EligibilityService.is_employee_excluded_from_period(opt.id, p.id, exclusion_map)
+                for p in matched_periods
+            )
+        ]
+
     period_breakdowns: List[PeriodBreakdownItem] = []
     if matched_periods:
         for p in matched_periods:
@@ -286,6 +304,7 @@ def build_dashboard(
                 custom_start=start_date,
                 custom_end=end_date,
                 persist_snapshot=(start_date is None and end_date is None),
+                exclusion_map=exclusion_map,
             )
             period_breakdowns.append(b_item)
 
@@ -343,7 +362,7 @@ def build_dashboard(
         tot_beds = sum(emp_beds.get(eid, 0.0) for eid in rel_ids)
         tot_tgt = sum(tgt_map.get(eid, 0.0) for eid in rel_ids)
 
-        performance_rows = []
+        performance_rows: List[PerformanceTableItem] = []
         for eid in rel_ids:
             rev = emp_rev.get(eid, 0.0)
             if rev <= 0:
@@ -353,7 +372,7 @@ def build_dashboard(
             ach = calculate_achievement_pct(rev, tgt)
             performance_rows.append(
                 PerformanceTableItem(
-                    rm_name=emp.name,
+                    rm_name=emp.name or "",
                     beds_sold=emp_beds.get(eid, 0.0),
                     revenue=rev,
                     monthly_target=tgt,
@@ -366,7 +385,7 @@ def build_dashboard(
                 )
             )
         performance_rows.sort(key=lambda x: x.revenue, reverse=True)
-        team_leader_tracker = []
+        team_leader_tracker: List[TeamLeaderIncentiveTrackerItem] = []
         kpis = KPIResponse(
             total_revenue=tot_rev,
             beds_sold=tot_beds,
@@ -396,6 +415,7 @@ def build_dashboard(
                 employee_id_filter=employee_id,
                 rm_name_filter=rm_name,
                 persist_snapshot=False,
+                exclusion_map=exclusion_map,
             )
             for p in all_periods
         ]
@@ -417,7 +437,10 @@ def build_dashboard(
     # 9. Monthly Revenue Chart (all months, respecting effective-dated employee eligibility)
     monthly_map: Dict[str, float] = defaultdict(float)
     for rec, emp in enriched:
-        if emp and not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map):
+        if emp and (
+            not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map)
+            or _is_excluded_for_date(emp.id, rec.date)
+        ):
             continue
         if employee_id and (not emp or emp.id != employee_id):
             continue
@@ -461,7 +484,10 @@ def build_dashboard(
             continue
         if period_end_day is not None and rec.date.day > period_end_day:
             continue
-        if emp and not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map):
+        if emp and (
+            not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map)
+            or _is_excluded_for_date(emp.id, rec.date)
+        ):
             continue
         if employee_id and (not emp or emp.id != employee_id):
             continue
@@ -486,7 +512,10 @@ def build_dashboard(
             continue
         if period_end_day is not None and rec.date.day > period_end_day:
             continue
-        if emp and not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map):
+        if emp and (
+            not EligibilityService.is_employee_active_on_date(emp, rec.date, hist_map)
+            or _is_excluded_for_date(emp.id, rec.date)
+        ):
             continue
         if employee_id and (not emp or emp.id != employee_id):
             continue
@@ -517,6 +546,7 @@ def build_dashboard(
                 employee_id_filter=employee_id,
                 rm_name_filter=rm_name,
                 persist_snapshot=False,
+                exclusion_map=exclusion_map,
             )
             for p in m_periods
         ]
@@ -567,7 +597,7 @@ def build_dashboard(
         team_leader_tracker=team_leader_tracker,
         team_performance=team_performance_chart,
         available_months=available_months,
-        available_rms=available_employee_options,
+        available_rms=[*available_employee_options],
         available_employees=available_employee_options,
         available_periods=available_periods,
         selected_period_code=selected_code,
@@ -640,6 +670,7 @@ def build_daily_revenue_drilldown(
     all_db_employees: List[Employee] = db.query(Employee).all()
     all_employees_map: Dict[int, Employee] = {e.id: e for e in all_db_employees}
     hist_map = EligibilityService.build_history_map(db)
+    exclusion_map = EligibilityService.build_period_exclusion_map(db)
     rm_map = _build_rm_map(all_db_employees)
 
     emp_team_map: Dict[int, Tuple[str, str]] = {}
@@ -682,10 +713,21 @@ def build_daily_revenue_drilldown(
 
         if date_period is not None:
             if not EligibilityService.is_employee_eligible_for_period(
-                emp, date_period.start_date, date_period.end_date, hist_map
+                emp,
+                date_period.start_date,
+                date_period.end_date,
+                hist_map,
+                period_id=date_period.id,
+                exclusion_map=exclusion_map,
             ):
                 continue
-        if not EligibilityService.is_employee_active_on_date(emp, target_date, hist_map):
+        if not EligibilityService.is_employee_active_on_date(
+            emp,
+            target_date,
+            hist_map,
+            period_id=date_period.id if date_period else None,
+            exclusion_map=exclusion_map,
+        ):
             continue
 
         if employee_id and emp.id != employee_id:
@@ -704,7 +746,7 @@ def build_daily_revenue_drilldown(
         if emp.id not in grouped:
             grouped[emp.id] = {
                 "employee_id": emp.id,
-                "employee_name": emp.name,
+                "employee_name": emp.name or "",
                 "team_name": team_name,
                 "team_leader_name": leader_name,
                 "transaction_count": 1,

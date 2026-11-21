@@ -25,6 +25,7 @@ from app.models.period_config import (
     PeriodTeamTargetConfiguration,
     PerformanceCalculationRecord,
     ConfigurationAuditHistory,
+    PeriodEmployeeExclusion,
 )
 from app.repositories.property_repository import PropertyRepository
 
