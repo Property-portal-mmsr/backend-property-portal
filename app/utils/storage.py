@@ -68,7 +68,7 @@ def _normalize_content_type(filename: str, content_type: Optional[str]) -> str:
     return "image/jpeg"
 
 
-def _s3_client():
+def _s3_client(use_configured_credentials: bool = True):
     import boto3
     from botocore.config import Config as BotoConfig
 
@@ -81,10 +81,28 @@ def _s3_client():
         "region_name": cfg.AWS_REGION,
         "config": s3_config,
     }
-    if cfg.AWS_ACCESS_KEY_ID and cfg.AWS_SECRET_ACCESS_KEY:
+    if use_configured_credentials and cfg.AWS_ACCESS_KEY_ID and cfg.AWS_SECRET_ACCESS_KEY:
         kwargs["aws_access_key_id"] = cfg.AWS_ACCESS_KEY_ID
         kwargs["aws_secret_access_key"] = cfg.AWS_SECRET_ACCESS_KEY
     return boto3.client("s3", **kwargs)
+
+
+_CREDENTIAL_ERROR_CODES = {
+    "InvalidAccessKeyId",
+    "InvalidClientTokenId",
+    "SignatureDoesNotMatch",
+    "ExpiredToken",
+    "AccessDenied",
+}
+
+
+def _is_credential_error(exc: Exception) -> bool:
+    response = getattr(exc, "response", None)
+    if isinstance(response, dict):
+        code = response.get("Error", {}).get("Code")
+        if code in _CREDENTIAL_ERROR_CODES:
+            return True
+    return False
 
 
 def _uploads_path_to_s3_key(path: str) -> str:
@@ -103,12 +121,25 @@ def _local_upload_path(relative_upload_path: str) -> str:
     rel = relative_upload_path.lstrip("/")
     if rel.startswith("uploads/"):
         rel = rel[len("uploads/") :]
-    return os.path.join(cfg.UPLOADS_DIR, rel)
+    direct = os.path.join(cfg.UPLOADS_DIR, rel)
+    if os.path.isfile(direct) or rel.startswith("images/"):
+        return direct
+    in_images = os.path.join(cfg.UPLOADS_DIR, "images", rel)
+    if os.path.isfile(in_images):
+        return in_images
+    return direct
 
 
 def _local_upload_exists(relative_upload_path: str) -> bool:
     local_path = _local_upload_path(relative_upload_path)
     return os.path.isfile(local_path)
+
+
+def _local_upload_url(relative_upload_path: str) -> str:
+    cfg = _settings()
+    local_path = _local_upload_path(relative_upload_path)
+    rel = os.path.relpath(local_path, cfg.UPLOADS_DIR).replace(os.sep, "/")
+    return f"/uploads/{rel.lstrip('/')}"
 
 
 def _cdn_url_for_upload_path(upload_path: str) -> Optional[str]:
@@ -208,7 +239,7 @@ def normalize_image_url(url: Optional[str]) -> Optional[str]:
         if parsed.path.startswith("/uploads/"):
             cfg = _settings()
             if cfg.ENVIRONMENT == "development" and _local_upload_exists(parsed.path):
-                return parsed.path
+                return _local_upload_url(parsed.path)
             cdn = _cdn_url_for_upload_path(parsed.path)
             if cdn:
                 return f"{cdn}?{parsed.query}" if parsed.query else cdn
@@ -234,7 +265,7 @@ def normalize_image_url(url: Optional[str]) -> Optional[str]:
             path = f"/uploads/{trimmed.lstrip('/')}"
 
         if cfg.ENVIRONMENT == "development" and _local_upload_exists(path):
-            return path
+            return _local_upload_url(path)
 
         cdn = _cdn_url_for_upload_path(path)
         if cdn:
@@ -258,8 +289,8 @@ def store_image_bytes(contents: bytes, filename: str = "", content_type: Optiona
     s3_key = f"uploads/{unique}{ext}"
 
     if cfg.S3_BUCKET_NAME:
-        try:
-            client = _s3_client()
+        def _put_object(use_configured_credentials: bool) -> str:
+            client = _s3_client(use_configured_credentials=use_configured_credentials)
             client.put_object(
                 Bucket=cfg.S3_BUCKET_NAME,
                 Key=s3_key,
@@ -268,12 +299,28 @@ def store_image_bytes(contents: bytes, filename: str = "", content_type: Optiona
                 CacheControl="public, max-age=31536000, immutable",
             )
             return public_url_for_key(s3_key)
-        except Exception:
-            logger.exception("S3 upload failed for property image")
-            if cfg.S3_BUCKET_NAME:
+
+        has_static_creds = bool(cfg.AWS_ACCESS_KEY_ID and cfg.AWS_SECRET_ACCESS_KEY)
+        try:
+            return _put_object(use_configured_credentials=True)
+        except Exception as exc:
+            if has_static_creds and _is_credential_error(exc):
+                logger.warning(
+                    "Configured AWS static credentials rejected (%s); retrying with default credential chain",
+                    exc,
+                )
+                try:
+                    return _put_object(use_configured_credentials=False)
+                except Exception:
+                    logger.exception("S3 upload failed using default credential chain")
+            else:
+                logger.exception("S3 upload failed for property image")
+
+            if cfg.ENVIRONMENT == "production":
                 raise RuntimeError(
                     "Image upload to shared storage failed. Please retry in a moment."
                 ) from None
+            logger.warning("Falling back to local disk upload in %s environment", cfg.ENVIRONMENT)
 
     os.makedirs(os.path.join(cfg.UPLOADS_DIR, "images"), exist_ok=True)
     local_name = f"{unique}{ext}"
@@ -281,4 +328,6 @@ def store_image_bytes(contents: bytes, filename: str = "", content_type: Optiona
     with open(local_path, "wb") as handle:
         handle.write(contents)
     relative = f"/uploads/images/{local_name}"
+    if cfg.ENVIRONMENT == "development":
+        return relative
     return f"{cfg.PUBLIC_UPLOADS_BASE_URL}{relative}" if cfg.PUBLIC_UPLOADS_BASE_URL else relative
